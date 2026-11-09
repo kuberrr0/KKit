@@ -15,6 +15,10 @@ public enum AppEvent: Sendable, Hashable {
     case screensDidSleep
     case screensDidWake
     case powerSourceChanged(isOnAC: Bool)
+    /// Clipboard History saved a new item (M3).
+    case clipboardChanged
+    /// Screen Tools saved a screenshot or recording to this file (M3).
+    case screenshotCaptured(URL)
     case custom(name: String, payload: [String: String])
 }
 

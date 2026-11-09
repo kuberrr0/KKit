@@ -1,5 +1,6 @@
 import Foundation
 import KKitCore
+import KKitServices
 import KKitServicesAPI
 import SwiftUI
 
@@ -82,6 +83,9 @@ public final class FakeHotkeyService: HotkeyService {
 @MainActor
 public final class FakeOverlayService: OverlayService {
     public private(set) var panels: [FakeOverlayHandle] = []
+    /// What the next `pickRegion` returns (`nil` = the user pressed ⎋).
+    public var nextRegion: RegionSelection?
+    public private(set) var regionRequests: [RegionPickerOptions] = []
     public var screens: [ScreenInfo] = [
         ScreenInfo(
             id: 1,
@@ -100,6 +104,14 @@ public final class FakeOverlayService: OverlayService {
         panels.append(handle)
         return handle
     }
+
+    public func pickRegion(_ options: RegionPickerOptions) async -> RegionSelection? {
+        regionRequests.append(options)
+        return nextRegion
+    }
+
+    /// Panels not yet closed.
+    public var openPanels: [FakeOverlayHandle] { panels.filter { !$0.isClosed } }
 }
 
 @MainActor
@@ -151,6 +163,11 @@ public final class InMemoryStorageService: StorageService, @unchecked Sendable {
     public func removeJSON(named name: String, for feature: FeatureID) throws {
         _ = lock.withLock { files.removeValue(forKey: "\(feature.rawValue)/\(name)") }
     }
+
+    /// A private in-memory SQLite database (the real implementation, so SQL is tested).
+    public func openDatabase(named name: String, for feature: FeatureID) throws -> any Database {
+        try SQLiteDatabase(url: nil)
+    }
 }
 
 /// A complete set of core services backed by fakes, for feature tests.
@@ -175,6 +192,8 @@ public struct TestEnvironment {
     public let location: FakeLocationService
     public let floatingBar: FakeFloatingBarService
     public let fileSearch: FakeFileSearchService
+    public let pasteboard: FakePasteboardService
+    public let screenCapture: FakeScreenCaptureService
 
     /// - Parameter granted: permissions that start granted.
     public init(granted: Set<Permission> = []) {
@@ -200,6 +219,8 @@ public struct TestEnvironment {
         location = FakeLocationService()
         floatingBar = FakeFloatingBarService()
         fileSearch = FakeFileSearchService()
+        pasteboard = FakePasteboardService()
+        screenCapture = FakeScreenCaptureService()
         services.register((any PermissionsService).self, permissions)
         services.register((any HotkeyService).self, hotkeys)
         services.register((any OverlayService).self, overlays)
@@ -215,6 +236,8 @@ public struct TestEnvironment {
         services.register((any LocationService).self, location)
         services.register((any FloatingBarService).self, floatingBar)
         services.register((any FileSearchService).self, fileSearch)
+        services.register((any PasteboardService).self, pasteboard)
+        services.register((any ScreenCaptureService).self, screenCapture)
     }
 
     /// Lets queued main-actor work (stream deliveries) run.

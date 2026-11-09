@@ -45,6 +45,8 @@ public struct OverlayConfiguration: Sendable, Equatable {
     public var hasShadow: Bool
     /// Hide when the panel loses key focus (Floating Bar).
     public var hidesOnResignKey: Bool
+    /// Can be dragged around by its background (pinned screenshots).
+    public var isMovable: Bool
 
     public init(
         level: OverlayLevel = .floating,
@@ -53,7 +55,8 @@ public struct OverlayConfiguration: Sendable, Equatable {
         acceptsKeyFocus: Bool = false,
         ignoresMouseEvents: Bool = false,
         hasShadow: Bool = true,
-        hidesOnResignKey: Bool = false
+        hidesOnResignKey: Bool = false,
+        isMovable: Bool = false
     ) {
         self.level = level
         self.screen = screen
@@ -62,6 +65,7 @@ public struct OverlayConfiguration: Sendable, Equatable {
         self.ignoresMouseEvents = ignoresMouseEvents
         self.hasShadow = hasShadow
         self.hidesOnResignKey = hidesOnResignKey
+        self.isMovable = isMovable
     }
 }
 
@@ -97,14 +101,52 @@ public struct ScreenInfo: Sendable, Equatable, Identifiable {
     }
 }
 
+/// What the region picker lets the user choose.
+public enum RegionPickerStyle: Sendable, Hashable {
+    /// Drag out a rectangle. Space switches to picking a window.
+    case area
+    /// Click a window. Space switches to dragging an area.
+    case window
+    /// Click a whole screen.
+    case screen
+}
+
+public struct RegionPickerOptions: Sendable, Hashable {
+    public var style: RegionPickerStyle
+    /// Shown at the top of the screen: "Select text to copy".
+    public var prompt: String?
+
+    public init(style: RegionPickerStyle = .area, prompt: String? = nil) {
+        self.style = style
+        self.prompt = prompt
+    }
+}
+
+/// What the user picked.
+public struct RegionSelection: Sendable, Hashable {
+    /// The display the selection is on (`CGDirectDisplayID`).
+    public var displayID: UInt32
+    /// In global screen coordinates (points, bottom-left origin, like `NSScreen.frame`).
+    public var rect: CGRect
+    /// Set when a window was picked (`CGWindowID`).
+    public var windowID: UInt32?
+
+    public init(displayID: UInt32, rect: CGRect, windowID: UInt32? = nil) {
+        self.displayID = displayID
+        self.rect = rect
+        self.windowID = windowID
+    }
+}
+
 /// Creates KKit's panels with the right level, Spaces, full-screen and multi-display
 /// behaviour, and posts `AppEvent.displaysChanged` when screens change.
 ///
 /// Features never create `NSWindow`/`NSPanel` themselves; they ask this service.
-/// Region pickers and tint overlays are added here when Screen Tools and Night Shift
-/// arrive.
 @MainActor
 public protocol OverlayService: AnyObject {
     func makePanel(_ configuration: OverlayConfiguration, content: AnyView) -> any OverlayHandle
     var screens: [ScreenInfo] { get }
+    /// Dims every screen and lets the user drag out an area or click a window.
+    /// ⎋ cancels (`nil`).
+    func pickRegion(_ options: RegionPickerOptions) async -> RegionSelection?
 }

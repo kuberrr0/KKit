@@ -120,11 +120,40 @@ public final class QuickNoteFeature: Feature {
         ]
     }
 
+    public var islandDropZones: [IslandDropZone] {
+        let controller = controller
+        return [
+            IslandDropZone(
+                id: "note",
+                title: String(localized: "Add to Note"),
+                symbol: "square.and.pencil",
+                order: 300,
+                accepts: [.text, .urls, .files]
+            ) { items in
+                controller.openEditor(with: QuickNoteFeature.noteText(for: items))
+            },
+        ]
+    }
+
     public var settingsPane: SettingsPane? {
         let controller = controller
         return SettingsPane {
             QuickNoteSettingsView(controller: controller)
         }
+    }
+
+    /// What dropping on "Add to Note" puts in the note: text as is, links in markdown,
+    /// files as paths, one per line.
+    static func noteText(for items: [DroppedItem]) -> String {
+        items.compactMap { item -> String? in
+            switch item {
+            case .text(let text): text
+            case .url(let url): url.isFileURL ? url.path : "<\(url.absoluteString)>"
+            case .file(let url): url.path
+            case .image: nil
+            }
+        }
+        .joined(separator: "\n")
     }
 
     /// What "Send to Note" puts in the note: the copied text, a markdown link, a path.

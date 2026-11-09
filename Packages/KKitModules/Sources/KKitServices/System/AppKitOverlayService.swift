@@ -9,6 +9,7 @@ import SwiftUI
 public final class AppKitOverlayService: OverlayService {
     private let events: EventBus
     private var observer: NSObjectProtocol?
+    private let regionPicker = RegionPicker()
 
     public init(events: EventBus) {
         self.events = events
@@ -25,6 +26,10 @@ public final class AppKitOverlayService: OverlayService {
 
     public func makePanel(_ configuration: OverlayConfiguration, content: AnyView) -> any OverlayHandle {
         PanelHandle(configuration: configuration, content: content)
+    }
+
+    public func pickRegion(_ options: RegionPickerOptions) async -> RegionSelection? {
+        await regionPicker.pick(options)
     }
 
     public var screens: [ScreenInfo] {
@@ -120,6 +125,8 @@ final class PanelHandle: OverlayHandle {
         panel.acceptsKeyFocus = configuration.acceptsKeyFocus
         panel.ignoresMouseEvents = configuration.ignoresMouseEvents
         panel.hasShadow = configuration.hasShadow
+        panel.isMovable = configuration.isMovable
+        panel.isMovableByWindowBackground = configuration.isMovable
         panel.setFrame(Self.frame(for: configuration), display: panel.isVisible)
     }
 

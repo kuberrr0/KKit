@@ -365,6 +365,16 @@ The Island also exposes a **drop target** to the Shelf: when a drag nears the no
 host asks every running feature that registered a `DropHandler` (Shelf, AirDrop action,
 Quick Note) and shows them as drop zones.
 
+> **As built (M3):** features contribute `islandDropZones` (`IslandDropZone`: title,
+> symbol, order, accepted `DropKind`s, an async `perform` that gets `[DroppedItem]`).
+> The host notices a drag by the drag pasteboard's `changeCount` plus global mouse
+> monitors, opens a drop area when the cursor is within ~150 pt of the notch, and
+> splits it into equal zones (`IslandDropZoneItem.index`). Shelf offers *Shelf* (100) and
+> *AirDrop* (200); Quick Note offers *Add to Note* (300). `IslandService.expand(page:
+> activityID:owner:)` opens the Island on a feature's page or activity (screenshot
+> thumbnails, scanned codes), and `IslandHandle.isExpanded` tells a feature the user is
+> looking, so it waits before dismissing.
+
 ### 6.2 Floating Bar host
 
 ```swift
@@ -449,6 +459,13 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 | **FileSearchService** (M2) | File and folder name search in the home folder, most recently used first | `NSMetadataQuery` (Spotlight) | — |
 | **FloatingBarService** (M2) | Open the Floating Bar with a query or in a feature's mode; implemented by `FloatingBarHost` | — | — |
 
+> **As built (M3):** StorageService opens SQLite databases with the system
+> `libsqlite3` (`SQLiteDatabase` in KKitServices; no GRDB). `PasteboardService`
+> (`NSPasteboardService`) polls every 0.4 s only while a feature listens and tags KKit's
+> own writes. `ScreenCaptureService` (`ScreenCaptureKitService`) captures displays,
+> areas and windows without KKit's panels; recording needs macOS 15. The region picker
+> lives in `OverlayService.pickRegion`.
+
 ### InputTapService in detail
 
 Keyboard, Window Management, Volume, Clean Mode and (later) scroll-direction all need to
@@ -485,7 +502,7 @@ context.input.arm(handlerID, for: .mouseDrag)   // ask for expensive events only
 A feature can publish a service for others to *optionally* use, without them importing it:
 
 ```swift
-// In KKitServicesAPI
+// In KKitServicesAPI (as built: `add(_ items: [DroppedItem]) async throws`)
 public protocol ShelfServicing: AnyObject { func add(_ items: [ShelfItem]) }
 
 // Shelf feature, in start():

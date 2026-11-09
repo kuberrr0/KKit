@@ -24,6 +24,9 @@ let package = Package(
         .library(name: "FeatureSearch", targets: ["FeatureSearch"]),
         .library(name: "FeatureCalculator", targets: ["FeatureCalculator"]),
         .library(name: "FeatureQuickNote", targets: ["FeatureQuickNote"]),
+        .library(name: "FeatureClipboard", targets: ["FeatureClipboard"]),
+        .library(name: "FeatureScreenTools", targets: ["FeatureScreenTools"]),
+        .library(name: "FeatureShelf", targets: ["FeatureShelf"]),
     ],
     dependencies: [
         // 2.x: 3.x needs swift-tools 6.2 (Xcode 26).
@@ -40,7 +43,8 @@ let package = Package(
             name: "KKitServices",
             dependencies: ["KKitCore", "KKitUI", "KKitServicesAPI", "KeyboardShortcuts"]
         ),
-        .target(name: "KKitServicesTesting", dependencies: ["KKitCore", "KKitServicesAPI"]),
+        // The fakes use the real SQLite database so feature tests run real SQL.
+        .target(name: "KKitServicesTesting", dependencies: ["KKitCore", "KKitServicesAPI", "KKitServices"]),
 
         // ── Hosts: the shared surfaces (menu bar, Settings, Island, Floating Bar)
         .target(name: "KKitHosts", dependencies: ["KKitCore", "KKitUI", "KKitServicesAPI"]),
@@ -56,6 +60,9 @@ let package = Package(
         .feature("FeatureSearch"),
         .feature("FeatureCalculator"),
         .feature("FeatureQuickNote"),
+        .feature("FeatureClipboard"),
+        .feature("FeatureScreenTools"),
+        .feature("FeatureShelf"),
 
         // ── Tests ─────────────────────────────────────────────────────────────
         .testTarget(name: "KKitCoreTests", dependencies: ["KKitCore", "KKitServicesTesting"]),
@@ -78,6 +85,9 @@ let package = Package(
         .featureTests("FeatureSearch"),
         .featureTests("FeatureCalculator"),
         .featureTests("FeatureQuickNote"),
+        .featureTests("FeatureClipboard"),
+        .featureTests("FeatureScreenTools"),
+        .featureTests("FeatureShelf"),
     ]
 )
 

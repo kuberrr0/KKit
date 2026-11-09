@@ -4,7 +4,7 @@ import KKitCore
 /// Per-feature files under ~/Library/Application Support/KKit/<featureID>/.
 ///
 /// Thread-safe, so features can read and write from actors and background tasks.
-/// SQLite (GRDB) databases are added here when Clipboard History needs them (M3).
+/// SQLite databases (`openDatabase`) arrived with Clipboard History (M3).
 public protocol StorageService: Sendable {
     /// The feature's folder, created if needed.
     func directory(for feature: FeatureID) throws -> URL
@@ -13,6 +13,9 @@ public protocol StorageService: Sendable {
     /// Writes `<name>.json` atomically.
     func writeJSON<Value: Encodable>(_ value: Value, named name: String, for feature: FeatureID) throws
     func removeJSON(named name: String, for feature: FeatureID) throws
+    /// Opens (creating if needed) `<name>.sqlite` in the feature's folder. Each call
+    /// opens a new connection; keep the one you get.
+    func openDatabase(named name: String, for feature: FeatureID) throws -> any Database
 }
 
 /// A feature's handle on its storage.
@@ -39,5 +42,9 @@ public struct FeatureStorage: Sendable {
 
     public func remove(named name: String) throws {
         try service.removeJSON(named: name, for: featureID)
+    }
+
+    public func openDatabase(named name: String) throws -> any Database {
+        try service.openDatabase(named: name, for: featureID)
     }
 }

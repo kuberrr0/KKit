@@ -93,3 +93,24 @@ struct IslandModelTests {
         #expect(IslandPageItem.activity(model.entries[0])?.id == "activity:power.awake")
     }
 }
+
+@MainActor
+struct IslandDropAreaTests {
+    @Test func picksTheZoneUnderTheCursor() {
+        #expect(IslandDropZoneItem.index(at: 10, width: 300, count: 3) == 0)
+        #expect(IslandDropZoneItem.index(at: 150, width: 300, count: 3) == 1)
+        #expect(IslandDropZoneItem.index(at: 300, width: 300, count: 3) == 2)
+        #expect(IslandDropZoneItem.index(at: -5, width: 300, count: 3) == 0)
+        #expect(IslandDropZoneItem.index(at: 10, width: 300, count: 0) == nil)
+    }
+
+    @Test func showsAndHidesTheDropArea() {
+        let model = IslandModel()
+        #expect(model.dropDisplay == nil)
+        model.showDropArea(on: 2)
+        #expect(model.dropDisplay == 2)
+        model.hideDropArea()
+        #expect(model.dropDisplay == nil)
+        #expect(model.hoveredDropZone == nil)
+    }
+}

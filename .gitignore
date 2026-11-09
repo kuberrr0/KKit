@@ -7,3 +7,6 @@ DerivedData/
 .DS_Store
 # Personal signing settings
 Config/Local.xcconfig
+# Icon build tooling (Design/Icons/build-icons.js)
+node_modules/
+package-lock.json

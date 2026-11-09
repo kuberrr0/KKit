@@ -19,8 +19,12 @@ public final class MenuBarHost: NSObject {
         super.init()
 
         if let button = statusItem.button {
-            let image = NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: "KKit")
+            // "MenuBarIcon" is the template PDF in the app's asset catalog
+            // (Design/Icons/build-icons.js). The symbol is a fallback if it's missing.
+            let image = NSImage(named: "MenuBarIcon")
+                ?? NSImage(systemSymbolName: "square.grid.2x2", accessibilityDescription: nil)
             image?.isTemplate = true
+            image?.accessibilityDescription = "KKit"
             button.image = image
             button.target = self
             button.action = #selector(togglePopover(_:))

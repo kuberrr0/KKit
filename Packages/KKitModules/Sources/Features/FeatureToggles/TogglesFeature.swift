@@ -70,24 +70,33 @@ public final class TogglesFeature: Feature {
 
     public var commands: [Command] {
         let controller = ensureController()
-        return SystemToggle.allCases.map { (toggle: SystemToggle) -> Command in
-            let state: (@MainActor @Sendable () -> CommandState)? = toggle.isSwitch
-                ? { [weak controller] in controller?.isOn(toggle) == true ? .on : .off }
-                : nil
-            return Command(
-                id: toggle.commandID,
-                title: toggle.commandTitle,
-                symbol: toggle.symbol,
-                keywords: toggle.keywords,
-                isEnabled: { [weak controller] in
-                    guard let controller else { return false }
-                    return controller.isAvailable(toggle) && !controller.busy.contains(toggle)
-                },
-                state: state
-            ) { [weak controller] _ in
-                try await controller?.perform(toggle)
+        return SystemToggle.allCases.map { Self.command(for: $0, controller: controller) }
+    }
+
+    private static func command(for toggle: SystemToggle, controller: ToggleController) -> Command {
+        var state: (@MainActor @Sendable () -> CommandState)?
+        if toggle.isSwitch {
+            state = { [weak controller] in
+                let isOn = controller?.isOn(toggle) ?? false
+                return isOn ? CommandState.on : CommandState.off
             }
         }
+        let isEnabled: @MainActor @Sendable () -> Bool = { [weak controller] in
+            guard let controller else { return false }
+            return controller.isAvailable(toggle) && !controller.busy.contains(toggle)
+        }
+        let perform: Command.Perform = { [weak controller] _ in
+            try await controller?.perform(toggle)
+        }
+        return Command(
+            id: toggle.commandID,
+            title: toggle.commandTitle,
+            symbol: toggle.symbol,
+            keywords: toggle.keywords,
+            isEnabled: isEnabled,
+            state: state,
+            perform: perform
+        )
     }
 
     public var quickToggles: [QuickToggle] {

@@ -132,14 +132,16 @@ struct TimerModelTests {
         feature.controller.toggleStopwatch()
         await env.settle()
         #expect(env.island.activityIDs.contains("stopwatch"))
-        #expect(env.island.activityIDs.contains { $0.hasPrefix("countdown.") })
+        let hasCountdown = env.island.activityIDs.contains { $0.hasPrefix("countdown.") }
+        #expect(hasCountdown)
 
         // The countdown clamps to at least 1 s; wait for it.
         try await Task.sleep(for: .milliseconds(1300))
         await env.settle()
         #expect(env.island.huds.last?.title == "eggs is done")
         #expect(env.notifications.delivered.count == 1)
-        #expect(!env.island.activityIDs.contains { $0.hasPrefix("countdown.") })
+        let stillHasCountdown = env.island.activityIDs.contains { $0.hasPrefix("countdown.") }
+        #expect(!stillHasCountdown)
 
         let saved = try env.storage.readJSON(TimerSnapshot.self, named: TimerFeature.stateFile, for: "timer")
         #expect(saved?.stopwatch.isRunning == true)

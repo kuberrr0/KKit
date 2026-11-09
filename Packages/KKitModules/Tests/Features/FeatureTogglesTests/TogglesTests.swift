@@ -38,10 +38,12 @@ struct TogglesTests {
         #expect(desktop.isHidingIcons)
         let open = env.overlays.panels.filter { !$0.isClosed }
         #expect(open.count == env.overlays.screens.count)
-        #expect(open.allSatisfy { $0.isVisible && $0.configuration.level == .aboveDesktopIcons && $0.configuration.ignoresMouseEvents })
+        let allCovering = open.allSatisfy { $0.isVisible && $0.configuration.level == .aboveDesktopIcons && $0.configuration.ignoresMouseEvents }
+        #expect(allCovering)
 
         try await controller.perform(.hideDesktopIcons)
-        #expect(env.overlays.panels.allSatisfy(\.isClosed))
+        let allClosed = env.overlays.panels.allSatisfy { $0.isClosed }
+        #expect(allClosed)
     }
 
     @Test func failuresShowAHUDAndThrow() async {
@@ -67,7 +69,8 @@ struct TogglesTests {
         context.settings[ToggleSettings.tiles] = [.lockScreen, .darkMode]
         #expect(feature.quickToggles.map(\.title) == ["Lock Screen", "Dark Mode"])
         #expect(feature.commands.count == SystemToggle.allCases.count)
-        #expect(feature.commands.allSatisfy { $0.id.featureID == "quickToggles" })
+        let allOwned = feature.commands.allSatisfy { $0.id.featureID == "quickToggles" }
+        #expect(allOwned)
         await feature.stop()
     }
 }

@@ -27,22 +27,15 @@ const ARM_DOWN = [512, 585, 668, 724];
 
 const line = ([x1, y1, x2, y2], stroke) =>
   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${W}" stroke-linecap="round"/>`;
-const grad = (id, [x1, y1, x2, y2], from, to) =>
-  `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"><stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/></linearGradient>`;
+
+// Flat solid colours only: no gradients, glows or shadows.
+const COLORS = { body: '#1C1D22', stem: '#FFFFFF', up: '#4D7CFF', down: '#FF6B4A' };
 
 const appIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <defs>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.28"/></filter>
-    ${grad('body', [0, 100, 0, 924], '#2A2D36', '#121318')}
-    ${grad('stem', STEM, '#FFFFFF', '#D9DCE3')}
-    ${grad('up', ARM_UP, '#3F7BFF', '#8B6CFF')}
-    ${grad('down', ARM_DOWN, '#FF8A3D', '#FF4D7D')}
-  </defs>
-  <path d="${BODY}" fill="url(#body)" filter="url(#shadow)"/>
-  <path d="${BODY}" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="3"/>
-  ${line(STEM, 'url(#stem)')}
-  ${line(ARM_UP, 'url(#up)')}
-  ${line(ARM_DOWN, 'url(#down)')}
+  <path d="${BODY}" fill="${COLORS.body}"/>
+  ${line(STEM, COLORS.stem)}
+  ${line(ARM_UP, COLORS.up)}
+  ${line(ARM_DOWN, COLORS.down)}
 </svg>
 `;
 

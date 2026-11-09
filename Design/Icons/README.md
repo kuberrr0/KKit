@@ -1,7 +1,8 @@
 # KKit icons
 
 **Concept: Modular K.** The stem and the two arms of the K are separate pieces, like
-KKit's plug-in features. Dark graphite body, white stem, blue and coral arms.
+KKit's plug-in features. Flat solid colours, no gradients: graphite body, white stem,
+blue upper arm, coral lower arm.
 
 | File | What |
 |---|---|

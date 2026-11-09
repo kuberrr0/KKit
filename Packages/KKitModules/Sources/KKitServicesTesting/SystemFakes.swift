@@ -318,3 +318,44 @@ public final class FakeLocationService: LocationService {
         return coordinate
     }
 }
+
+/// Now Playing that tests set by hand; records the commands sent.
+@MainActor
+public final class FakeNowPlayingService: NowPlayingService {
+    public var availability: NowPlayingAvailability {
+        didSet { availabilityBroadcast.send(availability) }
+    }
+
+    public var nowPlaying: NowPlayingInfo? {
+        didSet { broadcast.send(nowPlaying) }
+    }
+
+    public private(set) var commands: [NowPlayingCommand] = []
+    public private(set) var seeks: [Double] = []
+
+    private let broadcast = Broadcast<NowPlayingInfo?>()
+    private let availabilityBroadcast = Broadcast<NowPlayingAvailability>()
+
+    public init(nowPlaying: NowPlayingInfo? = nil, availability: NowPlayingAvailability = .available) {
+        self.nowPlaying = nowPlaying
+        self.availability = availability
+    }
+
+    public var subscriberCount: Int { broadcast.subscriberCount }
+
+    public func updates() -> AsyncStream<NowPlayingInfo?> {
+        broadcast.stream(initial: .some(nowPlaying))
+    }
+
+    public func availabilityUpdates() -> AsyncStream<NowPlayingAvailability> {
+        availabilityBroadcast.stream(initial: availability)
+    }
+
+    public func send(_ command: NowPlayingCommand) {
+        commands.append(command)
+    }
+
+    public func seek(to seconds: Double) {
+        seeks.append(seconds)
+    }
+}

@@ -92,4 +92,30 @@ targets:
         product: FeatureCleanMode
       - package: KKitModules
         product: FeatureBrightness
+      - package: KKitModules
+        product: FeatureNowPlaying
+      # Loaded by /usr/bin/perl, never by KKit, so it's embedded but not linked.
+      - target: KKitMediaRemoteAdapter
+        embed: true
+        link: false
     scheme: {}
+
+  # Now Playing helper (Helpers/MediaRemoteAdapter): a small library that
+  # MediaRemoteNowPlayingService loads into /usr/bin/perl, because MediaRemote only
+  # answers Apple's own processes since macOS 15.4.
+  KKitMediaRemoteAdapter:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Helpers/MediaRemoteAdapter
+    settings:
+      base:
+        PRODUCT_NAME: KKitMediaRemoteAdapter
+        PRODUCT_BUNDLE_IDENTIFIER: com.kv.kkit.mediaremote-adapter
+        GENERATE_INFOPLIST_FILE: YES
+        CLANG_ENABLE_OBJC_ARC: YES
+        DEFINES_MODULE: NO
+        SKIP_INSTALL: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: $(KKIT_CODE_SIGN_IDENTITY)
+        DEVELOPMENT_TEAM: $(KKIT_DEVELOPMENT_TEAM)

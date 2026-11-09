@@ -4,6 +4,7 @@ import FeatureCleanMode
 import FeatureClipboard
 import FeatureKeyboard
 import FeatureNightShift
+import FeatureNowPlaying
 import FeaturePower
 import FeaturePrivacyIndicator
 import FeatureQuickNote
@@ -24,6 +25,7 @@ enum FeatureCatalog {
     static let all: [any Feature.Type] = [
         VolumeFeature.self,
         BrightnessFeature.self,
+        NowPlayingFeature.self,
         StatsFeature.self,
         PowerFeature.self,
         NightShiftFeature.self,

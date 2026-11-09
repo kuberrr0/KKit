@@ -378,37 +378,19 @@ struct IslandExpandedView: View {
         let selected = pages.first { $0.id == model.selectedPageID } ?? pages.first
         let side = max(0, (width - geometry.centerWidth) / 2 - KKSpacing.l)
         VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                if let selected {
-                    Label(selected.title, systemImage: selected.symbol)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .lineLimit(1)
-                        .frame(width: side, alignment: .leading)
+            // A HUD (volume, brightness, …) replaces the header row around the notch
+            // while it's up, so changes made while expanded (scrolling on the Island,
+            // the volume keys) stay visible.
+            ZStack {
+                if let hud = model.hud?.hud {
+                    ExpandedHUDHeader(hud: hud, side: side, centerWidth: geometry.centerWidth)
+                        .transition(.opacity)
+                } else {
+                    header(selected: selected, side: side)
+                        .transition(.opacity)
                 }
-                Spacer(minLength: geometry.centerWidth)
-                HStack(spacing: KKSpacing.xs) {
-                    ForEach(pages) { page in
-                        Button {
-                            selectPage(page.id)
-                        } label: {
-                            Image(systemName: page.symbol)
-                                .font(.system(size: 11, weight: .semibold))
-                                .frame(width: 22, height: 18)
-                                .foregroundStyle(page.id == selected?.id ? Color.white : Color.white.opacity(0.45))
-                                .background(
-                                    Capsule().fill(Color.white.opacity(page.id == selected?.id ? 0.18 : 0))
-                                )
-                        }
-                        .buttonStyle(.plain)
-                        .help(page.title)
-                        .accessibilityLabel(Text(page.title))
-                        .accessibilityAddTraits(page.id == selected?.id ? .isSelected : [])
-                    }
-                }
-                .frame(width: side, alignment: .trailing)
             }
-            .padding(.horizontal, KKSpacing.l)
+            .animation(.easeOut(duration: 0.15), value: model.hud == nil)
             .frame(height: geometry.barHeight)
 
             Group {
@@ -424,6 +406,71 @@ struct IslandExpandedView: View {
             .padding(.top, KKSpacing.s)
             .padding(.bottom, KKSpacing.m)
         }
+    }
+
+    /// The page title on the left of the notch and the page picker on the right.
+    private func header(selected: IslandPageItem?, side: CGFloat) -> some View {
+        HStack(spacing: 0) {
+            if let selected {
+                Label(selected.title, systemImage: selected.symbol)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(1)
+                    .frame(width: side, alignment: .leading)
+            }
+            Spacer(minLength: geometry.centerWidth)
+            HStack(spacing: KKSpacing.xs) {
+                ForEach(pages) { page in
+                    Button {
+                        selectPage(page.id)
+                    } label: {
+                        Image(systemName: page.symbol)
+                            .font(.system(size: 11, weight: .semibold))
+                            .frame(width: 22, height: 18)
+                            .foregroundStyle(page.id == selected?.id ? Color.white : Color.white.opacity(0.45))
+                            .background(
+                                Capsule().fill(Color.white.opacity(page.id == selected?.id ? 0.18 : 0))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .help(page.title)
+                    .accessibilityLabel(Text(page.title))
+                    .accessibilityAddTraits(page.id == selected?.id ? .isSelected : [])
+                }
+            }
+            .frame(width: side, alignment: .trailing)
+        }
+        .padding(.horizontal, KKSpacing.l)
+        .frame(height: geometry.barHeight)
+    }
+}
+
+/// A HUD in the expanded Island's header row: symbol (and title) left of the notch,
+/// level bar and detail right of it, like the compact HUD.
+struct ExpandedHUDHeader: View {
+    let hud: IslandHUD
+    let side: CGFloat
+    let centerWidth: CGFloat
+
+    var body: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: KKSpacing.s) {
+                HUDSymbol(hud: hud)
+                if let title = hud.title {
+                    Text(title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .frame(width: side, alignment: .leading)
+            Spacer(minLength: centerWidth)
+            HUDTrailing(hud: hud)
+                .frame(width: side, alignment: .trailing)
+        }
+        .padding(.horizontal, KKSpacing.l)
+        .accessibilityElement(children: .combine)
     }
 }
 

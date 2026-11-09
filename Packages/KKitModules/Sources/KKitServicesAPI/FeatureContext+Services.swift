@@ -94,4 +94,9 @@ public extension FeatureContext {
     var commandRunner: any CommandRunnerService {
         services.require((any CommandRunnerService).self)
     }
+
+    /// What's playing in any app, and media controls.
+    var nowPlaying: any NowPlayingService {
+        services.require((any NowPlayingService).self)
+    }
 }

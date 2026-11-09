@@ -451,7 +451,7 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 | **WindowService** | Window under cursor, list/focus/raise windows, get/set frames (throttled to display refresh), screen visible frames, macOS tiling detection | `AXUIElement`, `CGWindowListCopyWindowInfo`, `NSScreen` | Accessibility |
 | **MenuBarItemsService** | List other apps' menu bar icons, their positions and images, press them, hide/show via separator items. Isolated because it's fragile | `NSStatusItem`, window list, `AXUIElement` | Accessibility, Screen Recording (icon images) |
 | **DeviceUsageService** | Which mic/camera is in use, and by which process where macOS says | CoreAudio process objects, CoreMediaIO | — |
-| **NowPlayingService** | Current track, artwork, controls; isolated because the backing API is unstable | MediaRemote (restricted since macOS 15.4) or AppleScript fallback | Automation |
+| **NowPlayingService** | Current track, artwork, controls; isolated because the backing API is unstable. Listens only while subscribed | MediaRemote through KKit's helper library (`Helpers/MediaRemoteAdapter`) loaded into `/usr/bin/perl`, since MediaRemote only answers Apple processes from macOS 15.4 | — |
 | **StorageService** | Per-feature folders, SQLite (GRDB) databases, JSON blobs, migrations | FileManager, GRDB | — |
 | **FileAccessService** | Remember user-picked folders (e.g. Obsidian vault) with bookmarks, watch for changes | Bookmarks, FSEvents / `DispatchSource` | — |
 | **NotificationService** | Route to Island first, fall back to system notifications | UserNotifications | Notifications |
@@ -606,7 +606,8 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 | Floating Bar host | | — | | ● | | ● | | | | | | | ○ `m ` menu items | ● frecency | Accessibility (menu items), Automation (tabs) |
 | Stats | ● alerts, page | ● cmds | ● items | | | | | | ● battery | ● | | | | ○ history | — |
 | Power | ● indicator, page | ● cmds | ● tile | ● | | | | ○ external display | ● | | | | | | — |
-| Island host | — | | | | | ● | ○ | | | | | | | | Automation (now playing fallback) |
+| Island host | — | | | | | ● | ○ | | | | | | | | — |
+| Now Playing | ● ears, page | ● cmds | | ● | | | ● NowPlaying | | | | | | | | — |
 | Screen Tools | ● thumbnail, rec | ● cmds | ● | ● | | ● picker | ○ audio | | | | ● copy | ● | | ● | Screen Recording, Microphone |
 | Clipboard | ○ flash | ● provider, mode | ● | ● | | ● picker | | | | | ● | | ● paste | ● SQLite | Accessibility, pasteboard access |
 | Shelf | ● drop zone, page | ● actions | ○ | ● | | | | | | | | | | ● | — |

@@ -278,8 +278,11 @@ struct MenuBarManagerTests {
     @Test func dropDownBarSize() {
         #expect(DropDownBarView.size(for: [], hasMessage: true) == DropDownBarView.messageSize)
         let size = DropDownBarView.size(for: [3, 2], hasMessage: false)
-        #expect(size.width == 6 * 2 + 5 * 30 + 9)
-        #expect(size.height == 26 + 12)
+        // Padding both sides, five 30 pt cells, one separator.
+        let width: CGFloat = 12 + 150 + 9
+        let height: CGFloat = 38
+        #expect(size.width == width)
+        #expect(size.height == height)
         #expect(DropDownBarView.size(for: [200], hasMessage: false).width == DropDownBarView.maximumWidth)
     }
 

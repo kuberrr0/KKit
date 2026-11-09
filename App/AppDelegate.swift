@@ -62,6 +62,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         services.register((any InputTapService).self, input)
         services.register((any WindowService).self, AXWindowService())
         services.register((any AccessibilityService).self, accessibility)
+        // M5: other apps' menu bar icons and the dividers that hide them.
+        services.register((any MenuBarItemsService).self, StatusBarMenuBarItemsService())
         workspaceEvents = WorkspaceEventsPublisher(events: events)
 
         let features = FeatureManager(
@@ -102,7 +104,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dependencies: dependencies,
             storage: storage,
             island: island,
-            accessibility: accessibility
+            accessibility: accessibility,
+            // The Menu Bar Manager adds menu bar icons to `m ` while it runs.
+            menuBarIcons: { [services] in services.resolve((any MenuBarIconsServicing).self) }
         )
         services.register((any FloatingBarService).self, floatingBar)
         self.floatingBar = floatingBar

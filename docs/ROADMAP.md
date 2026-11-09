@@ -150,7 +150,31 @@ Done. Notes on what was built versus the plan below:
 - Volume media-key takeover and push-to-talk, per-app volume (process taps)
 - Menu-items provider (`m `) for the Floating Bar
 
-## M5 — Menu Bar Manager
+## M5 — Menu Bar Manager ✅
+
+Done. Notes on what was built versus the plan below:
+
+- `MenuBarItemsService` (`StatusBarMenuBarItemsService`) owns three status items, right
+  to left: the ‹ chevron, the Hidden divider and the optional Always Hidden divider. A
+  hidden section's divider grows to 10 000 pt and pushes the icons left of it off the
+  screen; sections are read from where icons sit relative to the dividers' midpoints,
+  so ⌘-dragging icons is how they move. Hiding needs no permission and fails open
+  (turn the feature off or quit KKit and every icon is back).
+- Icons are read per app through Accessibility (`AXExtrasMenuBar`, 0.15 s per app,
+  never KKit's own process) and matched to their status windows by frame for pictures
+  (`ScreenCaptureService`, only while on screen). Opening a hidden icon shows its
+  section first, then `AXPress`, falling back to a click. Moving from Settings posts a
+  ⌘-drag (marked so KKit's tap ignores it) and checks the result.
+- The drop-down bar is used on screens with a notch by default (a setting); the Island
+  isn't involved. Hover reveal is hovering the chevron (a tracking area, no polling).
+  "Show all while ⌘ is held" is a `.low` flags-changed handler on the shared tap.
+- The `m ` provider stays in the Floating Bar host; the feature publishes
+  `MenuBarIconsServicing` and the host adds icons while it's there.
+- Icon spacing writes `NSStatusItemSpacing`/`NSStatusItemSelectionPadding` for the
+  current host (apps pick it up when they relaunch).
+- On macOS 26 the page also points to System Settings › Menu Bar.
+- Left for later: KKit's own icons in the Settings list, Ice-style "move the icon out
+  temporarily" instead of showing the whole section, per-display menu bars.
 
 - **MenuBarItemsService** + **Menu Bar Manager** (sections, drop-down bar for hidden and
   behind-the-notch icons). Last of the core features because it's the most fragile.

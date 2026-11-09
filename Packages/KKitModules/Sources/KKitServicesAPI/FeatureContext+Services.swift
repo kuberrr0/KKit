@@ -94,4 +94,9 @@ public extension FeatureContext {
     var commandRunner: any CommandRunnerService {
         services.require((any CommandRunnerService).self)
     }
+
+    /// Other apps' menu bar icons and KKit's dividers (M5).
+    var menuBarItems: any MenuBarItemsService {
+        services.require((any MenuBarItemsService).self)
+    }
 }

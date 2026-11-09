@@ -30,21 +30,22 @@ public final class FloatingBarHost: FloatingBarService {
 
     static let rememberSeconds: TimeInterval = 30
 
-    /// The frontmost app's menus under `m ` (M4).
+    /// The frontmost app's menus under `m ` (M4), and menu bar icons (M5).
     private let menuItemsProvider: MenuItemsSearchProvider?
 
     public init(
         dependencies: HostDependencies,
         storage: any StorageService,
         island: (any IslandService)?,
-        accessibility: (any AccessibilityService)? = nil
+        accessibility: (any AccessibilityService)? = nil,
+        menuBarIcons: @escaping @MainActor () -> (any MenuBarIconsServicing)? = { nil }
     ) {
         self.dependencies = dependencies
         self.storage = storage
         self.island = island
         let permissions = dependencies.permissions
         self.menuItemsProvider = accessibility.map { service in
-            MenuItemsSearchProvider(accessibility: service) {
+            MenuItemsSearchProvider(accessibility: service, menuBarIcons: menuBarIcons) {
                 Task { await permissions.request(.accessibility) }
             }
         }

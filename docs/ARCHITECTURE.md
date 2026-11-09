@@ -475,6 +475,13 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 > commands by id. `DisplayService` gained brightness (built-in displays) and
 > `AudioService` per-app volume (`ProcessTapMixer`, macOS 14.2 process taps).
 
+> **As built (M5):** `MenuBarItemsService` is `StatusBarMenuBarItemsService`: it owns the
+> Menu Bar Manager's chevron and divider status items (features still never make status
+> items; standalone items go through the menu bar host), lists icons through each app's
+> `AXExtrasMenuBar` in an actor (`AXMenuBarEngine`, never KKit's own process), presses
+> them with `AXPress`, and moves them with a synthetic ⌘-drag. The pure geometry
+> (sections, notch, drop points) is `MenuBarLayout`, unit-tested.
+
 ### InputTapService in detail
 
 Keyboard, Window Management, Volume, Clean Mode and (later) scroll-direction all need to
@@ -614,7 +621,7 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 | Night Shift | | ● cmds | ● tile, slider | ● | | | | ● gamma, dim, wake | | | | | | | Location (optional) |
 | Quick Note | ○ "saved" | ● `n ` mode, ⌘K action | | ● | | | | | | | ○ | | ○ selection | ● bookmark | — (folder picked by user) |
 | Window Management | ○ layout saved | ● cmds, layouts provider | | ● | ● modifier + mouse, drag snap | ● snap preview | | | | | | | ● WindowService | ● layouts | Accessibility |
-| Menu Bar Manager | | ● `m ` provider | ● separators | ● | | ● drop-down bar | | | | | | ○ icon images | ● MenuBarItems | ● | Accessibility, Screen Recording |
+| Menu Bar Manager | | ● icons in `m ` (`MenuBarIconsServicing`) | ● chevron, dividers (MenuBarItems), tile | ● | ○ ⌘ shows all (`.low`) | ● drop-down bar | | | | | | ○ icon images | ● MenuBarItems | | — (Accessibility to list/open/move, Screen Recording for pictures; both optional) |
 | Quick Toggles | | ● cmds | ● tiles | ● | | ○ hide desktop | | | | | | | | | Automation (per toggle) |
 | Privacy Indicator | ● ear, page | ● cmd | | | | | ● DeviceUsage, mute | | | | | | | ○ log | — |
 | Timer | ● countdowns, alert, page | ● cmds | ● tile | ● | | | | | | | | | | ● saved timers | Notifications (optional) |

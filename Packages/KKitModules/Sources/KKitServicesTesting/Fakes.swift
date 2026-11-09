@@ -198,6 +198,7 @@ public struct TestEnvironment {
     public let windows: FakeWindowService
     public let accessibility: FakeAccessibilityService
     public let commandRunner: FakeCommandRunner
+    public let menuBarItems: FakeMenuBarItemsService
 
     /// - Parameter granted: permissions that start granted.
     public init(granted: Set<Permission> = []) {
@@ -229,6 +230,7 @@ public struct TestEnvironment {
         windows = FakeWindowService()
         accessibility = FakeAccessibilityService()
         commandRunner = FakeCommandRunner()
+        menuBarItems = FakeMenuBarItemsService()
         services.register((any PermissionsService).self, permissions)
         services.register((any HotkeyService).self, hotkeys)
         services.register((any OverlayService).self, overlays)
@@ -250,6 +252,7 @@ public struct TestEnvironment {
         services.register((any WindowService).self, windows)
         services.register((any AccessibilityService).self, accessibility)
         services.register((any CommandRunnerService).self, commandRunner)
+        services.register((any MenuBarItemsService).self, menuBarItems)
     }
 
     /// Lets queued main-actor work (stream deliveries) run.

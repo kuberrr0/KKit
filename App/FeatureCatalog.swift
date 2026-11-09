@@ -3,6 +3,7 @@ import FeatureCalculator
 import FeatureCleanMode
 import FeatureClipboard
 import FeatureKeyboard
+import FeatureMenuBarManager
 import FeatureNightShift
 import FeaturePower
 import FeaturePrivacyIndicator
@@ -39,5 +40,6 @@ enum FeatureCatalog {
         KeyboardFeature.self,
         WindowsFeature.self,
         CleanModeFeature.self,
+        MenuBarManagerFeature.self,
     ]
 }

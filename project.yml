@@ -92,4 +92,6 @@ targets:
         product: FeatureCleanMode
       - package: KKitModules
         product: FeatureBrightness
+      - package: KKitModules
+        product: FeatureMenuBarManager
     scheme: {}

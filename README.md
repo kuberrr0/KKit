@@ -5,8 +5,10 @@ volume control, system stats, keep-awake, screen tools (screenshot, OCR, colour 
 recording), clipboard history, a file shelf, keyboard superpowers (Hyper key), a much
 stronger Night Shift, and quick notes straight into your Obsidian vault.
 
-Status: **M0 (skeleton)**: the plug-in core, services, menu bar item and Settings window
-are in; features arrive from M1. Docs:
+Status: **M2**: the plug-in core, the menu bar, the Island, the low-permission
+features (Power, Stats, Night Shift, Volume, Privacy Indicator, Timer, Quick Toggles) and
+the Floating Bar with Search, Calculator and Quick Note are in. Next is M3 (clipboard and
+screen tools). Docs:
 
 - [Design](docs/DESIGN.md): UI/UX for every feature, plus suggested features
 - [Architecture](docs/ARCHITECTURE.md): how it's built and how features plug in

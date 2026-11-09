@@ -72,4 +72,10 @@ targets:
         product: FeatureTimer
       - package: KKitModules
         product: FeatureToggles
+      - package: KKitModules
+        product: FeatureSearch
+      - package: KKitModules
+        product: FeatureCalculator
+      - package: KKitModules
+        product: FeatureQuickNote
     scheme: {}

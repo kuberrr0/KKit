@@ -21,8 +21,8 @@ public protocol Feature: AnyObject {
 
     // ── Contributions (all optional) ────────────────────────────────────────
     // `commands` are read once when the feature starts. The others are read by the
-    // hosts while the feature runs, so they may depend on settings.
-    // Search providers and result actions arrive with the Floating Bar (M2).
+    // hosts while the feature runs, so they may depend on settings. Return the same
+    // search provider instances each time.
 
     /// Actions, each reachable from hotkeys, the Floating Bar, URLs and Shortcuts.
     var commands: [Command] { get }
@@ -36,6 +36,12 @@ public protocol Feature: AnyObject {
     var islandPages: [IslandPage] { get }
     /// The feature's page in Settings.
     var settingsPane: SettingsPane? { get }
+    /// Sources of Floating Bar results.
+    var searchProviders: [any SearchProvider] { get }
+    /// ⌘K actions on Floating Bar results.
+    var resultActions: [ResultAction] { get }
+    /// Views that take over the Floating Bar (Quick Note's editor).
+    var floatingBarModes: [FloatingBarMode] { get }
 }
 
 public extension Feature {
@@ -45,6 +51,9 @@ public extension Feature {
     var menuBarItems: [MenuBarItem] { [] }
     var islandPages: [IslandPage] { [] }
     var settingsPane: SettingsPane? { nil }
+    var searchProviders: [any SearchProvider] { [] }
+    var resultActions: [ResultAction] { [] }
+    var floatingBarModes: [FloatingBarMode] { [] }
 
     var manifest: FeatureManifest { Self.manifest }
 }

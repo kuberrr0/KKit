@@ -173,6 +173,8 @@ public struct TestEnvironment {
     public let notifications: FakeNotificationService
     public let systemActions: FakeSystemActionsService
     public let location: FakeLocationService
+    public let floatingBar: FakeFloatingBarService
+    public let fileSearch: FakeFileSearchService
 
     /// - Parameter granted: permissions that start granted.
     public init(granted: Set<Permission> = []) {
@@ -196,6 +198,8 @@ public struct TestEnvironment {
         notifications = FakeNotificationService()
         systemActions = FakeSystemActionsService()
         location = FakeLocationService()
+        floatingBar = FakeFloatingBarService()
+        fileSearch = FakeFileSearchService()
         services.register((any PermissionsService).self, permissions)
         services.register((any HotkeyService).self, hotkeys)
         services.register((any OverlayService).self, overlays)
@@ -209,6 +213,8 @@ public struct TestEnvironment {
         services.register((any NotificationService).self, notifications)
         services.register((any SystemActionsService).self, systemActions)
         services.register((any LocationService).self, location)
+        services.register((any FloatingBarService).self, floatingBar)
+        services.register((any FileSearchService).self, fileSearch)
     }
 
     /// Lets queued main-actor work (stream deliveries) run.

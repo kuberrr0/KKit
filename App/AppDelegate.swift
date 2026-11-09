@@ -18,6 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarHost?
     private var settingsHost: SettingsHost?
     private var island: IslandHost?
+    private var floatingBar: FloatingBarHost?
+    private var commandRunner: ExternalCommandRunner?
     private var workspaceEvents: WorkspaceEventsPublisher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -49,6 +51,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         services.register((any NotificationService).self, UserNotificationService())
         services.register((any SystemActionsService).self, MacSystemActionsService())
         services.register((any LocationService).self, CoreLocationService())
+        // M2: Spotlight file search for the Floating Bar's file provider.
+        services.register((any FileSearchService).self, SpotlightFileSearchService())
         workspaceEvents = WorkspaceEventsPublisher(events: events)
 
         let features = FeatureManager(
@@ -76,13 +80,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let island = IslandHost(dependencies: dependencies, events: events)
         services.register((any IslandService).self, island)
         self.island = island
+        // The Floating Bar is a host and a service too: features open it with a query
+        // or in one of their modes.
+        let floatingBar = FloatingBarHost(dependencies: dependencies, storage: storage, island: island)
+        services.register((any FloatingBarService).self, floatingBar)
+        self.floatingBar = floatingBar
         menuBar = MenuBarHost(dependencies: dependencies)
-        settingsHost = SettingsHost(dependencies: dependencies)
+        let settingsHost = SettingsHost(dependencies: dependencies, floatingBar: floatingBar)
+        self.settingsHost = settingsHost
+        floatingBar.openSettings = { [weak settingsHost] page in
+            settingsHost?.show(page)
+        }
+        let commandRunner = ExternalCommandRunner(commands: commands, settings: settings, floatingBar: floatingBar)
+        ExternalCommandRunner.shared = commandRunner
+        self.commandRunner = commandRunner
         registerAppCommands()
 
         Task {
             await features.startEnabledFeatures()
+            commandRunner.markReady()
             log.info("KKit started with \(features.runningFeatures.count) feature(s) running")
+        }
+    }
+
+    /// `kkit://run/<command>?value=…` and `kkit://search?q=…` (ARCHITECTURE.md §5).
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let commandRunner else { return }
+        for url in urls {
+            Task {
+                do {
+                    try await commandRunner.handle(url)
+                } catch {
+                    log.error("Link \(url.absoluteString, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+                    island?.showHUD(
+                        IslandHUD(
+                            id: "app.link",
+                            symbol: "exclamationmark.triangle.fill",
+                            title: error.localizedDescription,
+                            tint: .warning,
+                            duration: 3
+                        ),
+                        owner: .app
+                    )
+                }
+            }
         }
     }
 

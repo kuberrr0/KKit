@@ -9,8 +9,8 @@ public enum CommandParameter: Sendable, Hashable {
     case choice([String])
 }
 
-/// A parsed argument.
-public enum CommandArgument: Sendable, Hashable {
+/// A parsed argument. `CommandArgumentParser` turns typed text into one.
+public enum CommandArgument: Sendable, Hashable, Codable {
     case percent(Double)
     case duration(Duration)
     case text(String)

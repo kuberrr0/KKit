@@ -55,4 +55,13 @@ public extension FeatureContext {
     var location: any LocationService {
         services.require((any LocationService).self)
     }
+
+    /// The Floating Bar host (M2).
+    var floatingBar: FeatureFloatingBar {
+        FeatureFloatingBar(owner: id, service: services.require((any FloatingBarService).self))
+    }
+
+    var fileSearch: any FileSearchService {
+        services.require((any FileSearchService).self)
+    }
 }

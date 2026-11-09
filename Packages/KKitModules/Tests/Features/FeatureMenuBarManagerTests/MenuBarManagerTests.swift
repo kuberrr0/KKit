@@ -18,6 +18,8 @@ struct MenuBarManagerTests {
     }
 
     private func make(_ env: TestEnvironment, pointer: Pointer = Pointer()) -> (MenuBarManagerController, FeatureSettings) {
+        // The fake menu bar service is trusted, so Accessibility is allowed too.
+        env.permissions.statuses[.accessibility] = .granted
         let settings = FeatureSettings(featureID: "menuBarManager", store: env.settings)
         let controller = MenuBarManagerController(
             service: env.menuBarItems,

@@ -603,7 +603,7 @@ notifications, start timer), Wi-Fi/network quick info, KKit plug-ins written as 
 | Typography | SF Pro, system text styles; SF Mono for numbers in Stats, the note editor and colour values |
 | Colour | Semantic system colours; one accent (follows system accent, overridable); status colours green/orange/red only for Stats alerts and recording |
 | Icons | SF Symbols only, hierarchical rendering; each feature owns one symbol used everywhere |
-| App and menu bar icon | "Modular K": a K whose stem and arms are separate pieces (plug-in modules). Sources and generator in `Design/Icons/`; the menu bar icon is a monochrome template PDF |
+| App and menu bar icon | "Island K": the notch Island above a K whose stem and arms are separate pieces (plug-in modules). Flat solid colours, no gradients. Sources and generator in `Design/Icons/`; the menu bar icon is a monochrome template PDF |
 | Motion | Spring (response 0.35, damping 0.8) for Island grow/shrink; 120 ms fades for HUDs; cross-fade under Reduce Motion |
 | Sound/haptics | Off by default; optional trackpad haptic on Island snap and HUD steps |
 | Accessibility | VoiceOver labels on every control, full keyboard navigation, respects Reduce Motion, Reduce Transparency and Increase Contrast |

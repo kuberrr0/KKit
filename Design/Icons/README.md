@@ -1,8 +1,10 @@
 # KKit icons
 
-**Concept: Modular K.** The stem and the two arms of the K are separate pieces, like
-KKit's plug-in features. Flat solid colours, no gradients: graphite body, white stem,
-blue upper arm, coral lower arm.
+**Concept: Island K.** The notch Island (a black pill with a green live dot and a
+waveform) sits above a "Modular K" whose stem and two arms are separate pieces, like
+KKit's plug-in features. Flat solid colours only, no gradients or shadows: graphite body,
+white stem, blue upper arm, coral lower arm. The menu bar icon is the same idea in one
+colour: a pill above the three-piece K.
 
 | File | What |
 |---|---|

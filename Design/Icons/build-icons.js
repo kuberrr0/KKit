@@ -8,8 +8,9 @@
 //   App/Assets.xcassets/AppIcon.appiconset/*                      (all macOS sizes)
 //   App/Assets.xcassets/MenuBarIcon.imageset/*                    (vector PDF, template)
 //
-// Concept: "Modular K". The stem and the two arms are separate pieces, like
-// KKit's plug-in features.
+// Concept: "Island K". The notch Island (a black pill with a live dot and a
+// waveform) above a "Modular K" whose stem and arms are separate pieces, like
+// KKit's plug-in features. Flat solid colours only: no gradients or shadows.
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
@@ -28,32 +29,52 @@ const ARM_DOWN = [512, 585, 668, 724];
 const line = ([x1, y1, x2, y2], stroke) =>
   `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${W}" stroke-linecap="round"/>`;
 
-// Flat solid colours only: no gradients, glows or shadows.
-const COLORS = { body: '#1C1D22', stem: '#FFFFFF', up: '#4D7CFF', down: '#FF6B4A' };
+const COLORS = {
+  body: '#1E1F25', island: '#000000', dot: '#30D158', wave: '#FFFFFF',
+  stem: '#FFFFFF', up: '#4D7CFF', down: '#FF6B4A',
+};
+// The K is drawn at full size above, then scaled into the space below the Island.
+const K_SCALE = 0.74;
+const K_CENTER = [512, 596];
 
 const appIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <path d="${BODY}" fill="${COLORS.body}"/>
-  ${line(STEM, COLORS.stem)}
-  ${line(ARM_UP, COLORS.up)}
-  ${line(ARM_DOWN, COLORS.down)}
+  <rect x="332" y="190" width="360" height="96" rx="48" fill="${COLORS.island}"/>
+  <circle cx="388" cy="238" r="18" fill="${COLORS.dot}"/>
+  <g fill="${COLORS.wave}">
+    <rect x="580" y="222" width="12" height="32" rx="6"/>
+    <rect x="604" y="210" width="12" height="56" rx="6"/>
+    <rect x="628" y="226" width="12" height="24" rx="6"/>
+  </g>
+  <g transform="translate(${K_CENTER[0]} ${K_CENTER[1]}) scale(${K_SCALE}) translate(-514 -512)">
+    ${line(STEM, COLORS.stem)}
+    ${line(ARM_UP, COLORS.up)}
+    ${line(ARM_DOWN, COLORS.down)}
+  </g>
 </svg>
 `;
 
 // ---- Menu bar icon (18 x 18 pt, black on transparent; macOS tints it as a template) ----
 
-const MB = { width: 2.5, strokes: [[4, 2.6, 4, 15.4], [9.6, 6.9, 14.2, 2.8], [9.6, 11.1, 14.2, 15.2]] };
+// Round-capped strokes [x1, y1, x2, y2, width]: the Island pill, then the K's three pieces.
+const MB = [
+  [5.4, 2.1, 12.6, 2.1, 3.2],
+  [5.4, 7.4, 5.4, 16.2, 2.1],
+  [9.3, 10.4, 12.9, 7.3, 2.1],
+  [9.3, 13.3, 12.9, 16.3, 2.1],
+];
 
 const menuBarSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18">
-  <g stroke="#000" stroke-width="${MB.width}" stroke-linecap="round">
-${MB.strokes.map(([a, b, c, d]) => `    <line x1="${a}" y1="${b}" x2="${c}" y2="${d}"/>`).join('\n')}
+  <g stroke="#000" stroke-linecap="round">
+${MB.map(([a, b, c, d, w]) => `    <line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke-width="${w}"/>`).join('\n')}
   </g>
 </svg>
 `;
 
 // A one-page vector PDF with the same strokes (PDF y axis points up).
 function menuBarPDF() {
-  const ops = [`0 g 0 G ${MB.width} w 1 J`]
-    .concat(MB.strokes.map(([a, b, c, d]) => `${a} ${+(18 - b).toFixed(2)} m ${c} ${+(18 - d).toFixed(2)} l S`))
+  const ops = ['0 g 0 G 1 J']
+    .concat(MB.map(([a, b, c, d, w]) => `${w} w ${a} ${+(18 - b).toFixed(2)} m ${c} ${+(18 - d).toFixed(2)} l S`))
     .join('\n');
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',

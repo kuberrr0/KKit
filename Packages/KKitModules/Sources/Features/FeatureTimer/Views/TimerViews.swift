@@ -6,16 +6,14 @@ import SwiftUI
 /// Which timer a compact view shows.
 enum TimerKind: Equatable {
     case countdown(UUID)
-    case pomodoro
     case stopwatch
 }
 
 extension TimerModel {
-    /// Remaining (countdown, Pomodoro) or elapsed (stopwatch) time.
+    /// Remaining (countdown) or elapsed (stopwatch) time.
     func displayTime(_ kind: TimerKind, at date: Date) -> TimeInterval {
         switch kind {
         case .countdown(let id): countdowns.first { $0.id == id }?.remaining(at: date) ?? 0
-        case .pomodoro: pomodoro?.remaining(at: date) ?? 0
         case .stopwatch: stopwatch.elapsed(at: date)
         }
     }
@@ -23,7 +21,6 @@ extension TimerModel {
     func progress(_ kind: TimerKind, at date: Date) -> Double {
         switch kind {
         case .countdown(let id): countdowns.first { $0.id == id }?.progress(at: date) ?? 1
-        case .pomodoro: pomodoro?.progress(at: date) ?? 1
         case .stopwatch: 0
         }
     }
@@ -31,7 +28,6 @@ extension TimerModel {
     func isRunning(_ kind: TimerKind) -> Bool {
         switch kind {
         case .countdown(let id): countdowns.first { $0.id == id }?.isRunning ?? false
-        case .pomodoro: pomodoro?.isRunning ?? false
         case .stopwatch: stopwatch.isRunning
         }
     }
@@ -60,15 +56,10 @@ struct TimerRing: View {
 
     var body: some View {
         TimerTicker(isRunning: model.isRunning(kind)) { date in
-            KKProgressRing(progress: model.progress(kind, at: date), tint: tint, lineWidth: 2.5)
+            KKProgressRing(progress: model.progress(kind, at: date), tint: .orange, lineWidth: 2.5)
                 .frame(width: 14, height: 14)
         }
         .accessibilityHidden(true)
-    }
-
-    private var tint: Color {
-        if case .pomodoro = kind, model.pomodoro?.phase != .work { return .green }
-        return .orange
     }
 }
 
@@ -126,40 +117,6 @@ struct CountdownIslandView: View {
                 }
                 TimerControlButton(symbol: "xmark", label: String(localized: "Cancel")) {
                     controller.cancel(id)
-                }
-            }
-        }
-    }
-}
-
-struct PomodoroIslandView: View {
-    let controller: TimerController
-
-    var body: some View {
-        let model = controller.model
-        if let pomodoro = model.pomodoro {
-            HStack(spacing: KKSpacing.l) {
-                VStack(alignment: .leading, spacing: KKSpacing.xxs) {
-                    Label(pomodoro.phase.title, systemImage: pomodoro.phase.symbol)
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(pomodoro.phase == .work ? Color.orange : Color.green)
-                    TimerBigClock(model: model, kind: .pomodoro)
-                    Text("\(pomodoro.completedWork) done this cycle")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                TimerControlButton(
-                    symbol: pomodoro.isRunning ? "pause.fill" : "play.fill",
-                    label: pomodoro.isRunning ? String(localized: "Pause") : String(localized: "Resume")
-                ) {
-                    controller.togglePausePomodoro()
-                }
-                TimerControlButton(symbol: "forward.end.fill", label: String(localized: "Skip")) {
-                    controller.skipPomodoroPhase()
-                }
-                TimerControlButton(symbol: "stop.fill", label: String(localized: "Stop")) {
-                    controller.stopPomodoro()
                 }
             }
         }
@@ -224,17 +181,10 @@ struct TimerIslandPage: View {
                     .controlSize(.small)
                 }
             }
-            HStack(spacing: KKSpacing.s) {
-                Button {
-                    controller.togglePomodoro()
-                } label: {
-                    Label(model.pomodoro == nil ? String(localized: "Start Pomodoro") : String(localized: "Stop Pomodoro"), systemImage: "brain.head.profile")
-                }
-                Button {
-                    controller.toggleStopwatch()
-                } label: {
-                    Label(model.stopwatch.isRunning ? String(localized: "Pause Stopwatch") : String(localized: "Stopwatch"), systemImage: "stopwatch")
-                }
+            Button {
+                controller.toggleStopwatch()
+            } label: {
+                Label(model.stopwatch.isRunning ? String(localized: "Pause Stopwatch") : String(localized: "Stopwatch"), systemImage: "stopwatch")
             }
             .controlSize(.small)
             if model.countdowns.isEmpty {
@@ -284,11 +234,6 @@ struct TimerControlButton: View {
 /// Settings › Timer.
 struct TimerSettingsView: View {
     @Setting(TimerSettings.defaultMinutes) private var defaultMinutes
-    @Setting(TimerSettings.workMinutes) private var workMinutes
-    @Setting(TimerSettings.shortBreakMinutes) private var shortBreakMinutes
-    @Setting(TimerSettings.longBreakMinutes) private var longBreakMinutes
-    @Setting(TimerSettings.longBreakEvery) private var longBreakEvery
-    @Setting(TimerSettings.autoStartNext) private var autoStartNext
     @Setting(TimerSettings.sound) private var sound
     @Setting(TimerSettings.notify) private var notify
     @Setting(TimerSettings.showInIsland) private var showInIsland
@@ -302,21 +247,6 @@ struct TimerSettingsView: View {
                     Text("Default length: \(KKFormat.shortDuration(defaultMinutes * 60))")
                 }
                 Toggle(String(localized: "Show in the Island"), isOn: $showInIsland)
-            }
-            KKSection(String(localized: "Pomodoro")) {
-                Stepper(value: $workMinutes, in: 1...120, step: 1) {
-                    Text("Focus: \(KKFormat.shortDuration(workMinutes * 60))")
-                }
-                Stepper(value: $shortBreakMinutes, in: 1...60, step: 1) {
-                    Text("Break: \(KKFormat.shortDuration(shortBreakMinutes * 60))")
-                }
-                Stepper(value: $longBreakMinutes, in: 1...90, step: 1) {
-                    Text("Long break: \(KKFormat.shortDuration(longBreakMinutes * 60))")
-                }
-                Stepper(value: $longBreakEvery, in: 1...12) {
-                    Text("Long break every \(longBreakEvery) intervals")
-                }
-                Toggle(String(localized: "Start the next interval automatically"), isOn: $autoStartNext)
             }
             KKSection(
                 String(localized: "When a timer ends"),

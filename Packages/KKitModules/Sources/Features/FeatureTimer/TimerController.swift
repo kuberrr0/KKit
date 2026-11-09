@@ -1,7 +1,7 @@
 import Foundation
 import KKitCore
 
-/// The model plus the clock and the Pomodoro settings: what the views and commands call.
+/// The model plus the clock and the settings: what the views and commands call.
 @MainActor
 final class TimerController {
     let model: TimerModel
@@ -12,15 +12,6 @@ final class TimerController {
         self.model = model
         self.settings = settings
         self.now = now
-    }
-
-    var lengths: PomodoroLengths {
-        PomodoroLengths(
-            work: max(1, settings[TimerSettings.workMinutes]) * 60,
-            shortBreak: max(1, settings[TimerSettings.shortBreakMinutes]) * 60,
-            longBreak: max(1, settings[TimerSettings.longBreakMinutes]) * 60,
-            longBreakEvery: max(1, settings[TimerSettings.longBreakEvery])
-        )
     }
 
     var defaultSeconds: TimeInterval { max(1, settings[TimerSettings.defaultMinutes]) * 60 }
@@ -34,24 +25,12 @@ final class TimerController {
     func cancel(_ id: Countdown.ID) { model.cancel(id) }
     func cancelAll() { model.cancelAllCountdowns() }
 
-    func togglePomodoro() {
-        if model.pomodoro == nil {
-            model.startPomodoro(lengths, at: now())
-        } else {
-            model.stopPomodoro()
-        }
-    }
-
-    func togglePausePomodoro() { model.togglePausePomodoro(at: now()) }
-    func skipPomodoroPhase() { model.skipPomodoroPhase(lengths, at: now()) }
-    func stopPomodoro() { model.stopPomodoro() }
-
     func toggleStopwatch() { model.toggleStopwatch(at: now()) }
     func lap() { model.lap(at: now()) }
     func resetStopwatch() { model.resetStopwatch() }
 
     func collectFinished() -> [TimerEvent] {
-        model.collectFinished(at: now(), lengths: lengths, autoStart: settings[TimerSettings.autoStartNext])
+        model.collectFinished(at: now())
     }
 
     var currentDate: Date { now() }

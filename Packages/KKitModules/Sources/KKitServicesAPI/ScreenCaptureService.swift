@@ -68,6 +68,18 @@ public enum CaptureError: LocalizedError, Sendable, Equatable {
     }
 }
 
+/// A small picture of one window, for previews (the window switcher).
+public struct WindowThumbnail: Sendable {
+    /// `CGWindowID`
+    public let windowID: UInt32
+    public let image: CapturedImage
+
+    public init(windowID: UInt32, image: CapturedImage) {
+        self.windowID = windowID
+        self.image = image
+    }
+}
+
 /// A recording in progress.
 @MainActor
 public protocol ScreenRecording: AnyObject {
@@ -84,6 +96,10 @@ public protocol ScreenRecording: AnyObject {
 @MainActor
 public protocol ScreenCaptureService: AnyObject {
     func capture(_ target: CaptureTarget, showsCursor: Bool) async throws -> CapturedImage
+    /// Downscaled pictures of windows (`CGWindowID`s), at most `maxSize` points, sent as
+    /// each one is ready, in no particular order. Windows that can't be captured are
+    /// left out; without Screen Recording permission the stream just finishes.
+    func windowThumbnails(_ windowIDs: [UInt32], maxSize: CGSize) -> AsyncStream<WindowThumbnail>
     /// Recording needs macOS 15 (`SCRecordingOutput`).
     var supportsRecording: Bool { get }
     func startRecording(_ target: CaptureTarget, options: RecordingOptions, to url: URL) async throws -> any ScreenRecording

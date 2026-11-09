@@ -559,6 +559,27 @@ See §2.2. It's a *host* like the Floating Bar: features push **activities** int
 
 ---
 
+### 3.19 Window Switcher (replaces ⌘Tab)
+
+- **Does:** switches between **windows**, not just apps. Hold ⌘ and press Tab: a panel
+  of live window previews appears, the previous window selected; Tab/⇧Tab or the
+  arrows move, letting go of ⌘ switches. A quick ⌘Tab switches straight to the previous
+  window without showing the panel. Minimised windows, hidden apps' windows and apps
+  with no open windows are included (each a setting), after the windows on screen.
+  While it's open: ↩ switches, ⎋ or a click elsewhere cancels, W closes the selected
+  window, Q quits its app, H hides it; hovering selects and clicking switches.
+- **Surfaces:** the switcher panel (centred on the screen with the pointer), the
+  `windowSwitcher.show` command (opens it without holding a key, for the Floating Bar
+  or a hotkey), Settings page.
+- **Settings:** take over modifier + Tab (on), which modifier (⌘, ⌥ or ⌃), include
+  minimised / hidden / windowless apps, live previews on/off and their size.
+- **Tech:** the shared **InputTapService** swallows ⌘Tab before the Dock sees it (and
+  every key while the switcher is open); **WindowService** lists and raises windows
+  through Accessibility; **ScreenCaptureService** takes small window pictures only
+  while the panel is showing. Needs **Accessibility**; previews need **Screen
+  Recording** (app icons without it). Windows on other Spaces aren't listed
+  (Accessibility doesn't see them); their apps appear as app tiles.
+
 ## 4. More feature ideas (not yet planned)
 
 Everything that was starred, plus Clean Mode and the Menu Bar Manager, has moved into §3.

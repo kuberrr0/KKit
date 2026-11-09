@@ -155,6 +155,11 @@ Done. Notes on what was built versus the plan below:
 - **MenuBarItemsService** + **Menu Bar Manager** (sections, drop-down bar for hidden and
   behind-the-notch icons). Last of the core features because it's the most fragile.
 
+## Window Switcher (added after M5)
+
+- **Window Switcher** (DESIGN.md §3.19): ⌘Tab through windows with live previews, on
+  the shared input tap, `WindowService` and `ScreenCaptureService`. On by default.
+
 ## M6 — Extras (pick from DESIGN.md §4)
 
 Next meeting, downloads watcher, on-device AI actions, external display brightness,

@@ -196,9 +196,21 @@ public final class FakeWindowService: WindowService {
         title: String = "Window",
         appName: String = "App",
         bundleID: String? = "com.example.app",
-        pid: Int32 = 100
+        pid: Int32 = 100,
+        isMinimized: Bool = false,
+        windowID: UInt32? = nil,
+        isAppHidden: Bool = false
     ) -> WindowInfo {
-        let info = WindowInfo(ref: WindowHandle(pid: pid, key: key), title: title, appName: appName, bundleID: bundleID, frame: frame)
+        let info = WindowInfo(
+            ref: WindowHandle(pid: pid, key: key),
+            title: title,
+            appName: appName,
+            bundleID: bundleID,
+            frame: frame,
+            isMinimized: isMinimized,
+            windowID: windowID,
+            isAppHidden: isAppHidden
+        )
         windows.append(info)
         return info
     }
@@ -238,6 +250,30 @@ public final class FakeWindowService: WindowService {
 
     public func raise(_ window: WindowHandle) async {
         raised.append(window)
+    }
+
+    public private(set) var closed: [WindowHandle] = []
+    /// What `switchableWindows` asked for last.
+    public private(set) var switchableRequests: [(includeMinimized: Bool, includeHiddenApps: Bool)] = []
+
+    /// `windows` in order, leaving out minimised windows and hidden apps' windows unless asked.
+    public func switchableWindows(includeMinimized: Bool, includeHiddenApps: Bool) async -> [WindowInfo] {
+        guard isTrusted else { return [] }
+        switchableRequests.append((includeMinimized, includeHiddenApps))
+        return windows.filter { window in
+            (includeMinimized || !window.isMinimized) && (includeHiddenApps || !window.isAppHidden)
+        }
+    }
+
+    public func close(_ window: WindowHandle) async {
+        closed.append(window)
+        windows.removeAll { $0.ref == window }
+    }
+
+    public private(set) var activatedApps: [Int32] = []
+
+    public func activateApp(pid: Int32) async {
+        activatedApps.append(pid)
     }
 
     public func frame(of key: UInt64) -> CGRect? {

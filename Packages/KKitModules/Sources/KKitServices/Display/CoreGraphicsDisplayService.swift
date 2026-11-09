@@ -19,6 +19,8 @@ public final class CoreGraphicsDisplayService: DisplayService {
     private var adjustments: [UInt32: ColorAdjustment] = [:]
     private var originals: [UInt32: GammaTable] = [:]
     private var eventTask: Task<Void, Never>?
+    /// Private DisplayServices, loaded at run time (ARCHITECTURE.md §11 conventions).
+    private let brightnessBridge = BrightnessBridge()
     private let log = KKitLog.logger("display")
 
     public init(events: EventBus) {
@@ -61,6 +63,14 @@ public final class CoreGraphicsDisplayService: DisplayService {
         guard !adjustments.isEmpty else { return }
         adjustments.removeAll()
         CGDisplayRestoreColorSyncSettings()
+    }
+
+    public func brightness(of displayID: UInt32) -> Double? {
+        brightnessBridge.brightness(of: displayID)
+    }
+
+    public func setBrightness(_ brightness: Double, for displayID: UInt32) {
+        brightnessBridge.setBrightness(brightness, for: displayID)
     }
 
     // MARK: Private

@@ -6,7 +6,7 @@ import KKitServicesAPI
 /// Command* App Intent (ARCHITECTURE.md §5). A value is parsed the same way as typed
 /// text in the Floating Bar ("30", "25m", a choice).
 @MainActor
-public final class ExternalCommandRunner {
+public final class ExternalCommandRunner: CommandRunnerService {
     public enum RunError: LocalizedError, Equatable {
         case notALink
         case linksTurnedOff
@@ -64,6 +64,18 @@ public final class ExternalCommandRunner {
     /// Commands that can be run from Shortcuts, by title.
     public var availableCommands: [Command] {
         commands.allCommands.sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    }
+
+    // MARK: CommandRunnerService (for features, e.g. Keyboard's leader sequences)
+
+    public var commandList: [CommandSummary] {
+        availableCommands.map {
+            CommandSummary(id: $0.id, title: $0.title, symbol: $0.symbol, takesValue: $0.parameter != nil)
+        }
+    }
+
+    public func run(_ id: CommandID, value: String?) async throws {
+        try await run(id, value: value, source: .hotkey)
     }
 
     public func handle(_ url: URL) async throws {

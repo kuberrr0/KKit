@@ -30,10 +30,24 @@ public final class FloatingBarHost: FloatingBarService {
 
     static let rememberSeconds: TimeInterval = 30
 
-    public init(dependencies: HostDependencies, storage: any StorageService, island: (any IslandService)?) {
+    /// The frontmost app's menus under `m ` (M4).
+    private let menuItemsProvider: MenuItemsSearchProvider?
+
+    public init(
+        dependencies: HostDependencies,
+        storage: any StorageService,
+        island: (any IslandService)?,
+        accessibility: (any AccessibilityService)? = nil
+    ) {
         self.dependencies = dependencies
         self.storage = storage
         self.island = island
+        let permissions = dependencies.permissions
+        self.menuItemsProvider = accessibility.map { service in
+            MenuItemsSearchProvider(accessibility: service) {
+                Task { await permissions.request(.accessibility) }
+            }
+        }
         self.settings = FeatureSettings(featureID: FloatingBarSettings.owner, store: dependencies.settings)
         let hotkeys = dependencies.hotkeys
         let commandProvider = CommandSearchProvider(
@@ -155,6 +169,9 @@ public final class FloatingBarHost: FloatingBarService {
     /// The commands provider first, then each running feature's providers and modes.
     private func currentSources() -> FloatingBarSources {
         var providers = [ProviderEntry(owner: FloatingBarSettings.owner, provider: model.commandProvider)]
+        if let menuItemsProvider {
+            providers.append(ProviderEntry(owner: FloatingBarSettings.owner, provider: menuItemsProvider))
+        }
         var modes: [ModeEntry] = []
         for feature in dependencies.features.runningFeatures {
             let owner = type(of: feature).manifest.id

@@ -131,6 +131,19 @@ public final class FakeAudioService: AudioService {
         case .input: state.defaultInput = device
         }
     }
+
+    public var apps: [AudioApp] = []
+    public private(set) var appVolumes: [String: Double] = [:]
+
+    public func audioApps() -> [AudioApp] { apps }
+
+    public func appVolume(for bundleID: String) -> Double {
+        appVolumes[bundleID] ?? 1
+    }
+
+    public func setAppVolume(_ volume: Double, for bundleID: String) {
+        appVolumes[bundleID] = volume >= 0.999 ? nil : min(max(volume, 0), 1)
+    }
 }
 
 @MainActor
@@ -213,6 +226,18 @@ public final class FakeDisplayService: DisplayService {
 
     public func resetColorAdjustments() {
         adjustments.removeAll()
+    }
+
+    /// Displays KKit can set the brightness of, and their level.
+    public var brightnessLevels: [UInt32: Double] = [1: 0.5]
+
+    public func brightness(of displayID: UInt32) -> Double? {
+        brightnessLevels[displayID]
+    }
+
+    public func setBrightness(_ brightness: Double, for displayID: UInt32) {
+        guard brightnessLevels[displayID] != nil else { return }
+        brightnessLevels[displayID] = min(max(brightness, 0), 1)
     }
 }
 

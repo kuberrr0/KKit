@@ -194,6 +194,10 @@ public struct TestEnvironment {
     public let fileSearch: FakeFileSearchService
     public let pasteboard: FakePasteboardService
     public let screenCapture: FakeScreenCaptureService
+    public let input: FakeInputTapService
+    public let windows: FakeWindowService
+    public let accessibility: FakeAccessibilityService
+    public let commandRunner: FakeCommandRunner
 
     /// - Parameter granted: permissions that start granted.
     public init(granted: Set<Permission> = []) {
@@ -221,6 +225,10 @@ public struct TestEnvironment {
         fileSearch = FakeFileSearchService()
         pasteboard = FakePasteboardService()
         screenCapture = FakeScreenCaptureService()
+        input = FakeInputTapService()
+        windows = FakeWindowService()
+        accessibility = FakeAccessibilityService()
+        commandRunner = FakeCommandRunner()
         services.register((any PermissionsService).self, permissions)
         services.register((any HotkeyService).self, hotkeys)
         services.register((any OverlayService).self, overlays)
@@ -238,6 +246,10 @@ public struct TestEnvironment {
         services.register((any FileSearchService).self, fileSearch)
         services.register((any PasteboardService).self, pasteboard)
         services.register((any ScreenCaptureService).self, screenCapture)
+        services.register((any InputTapService).self, input)
+        services.register((any WindowService).self, windows)
+        services.register((any AccessibilityService).self, accessibility)
+        services.register((any CommandRunnerService).self, commandRunner)
     }
 
     /// Lets queued main-actor work (stream deliveries) run.

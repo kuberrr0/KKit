@@ -113,7 +113,35 @@ Done. Notes on what was built versus the plan below:
 - **Screen Tools** (screenshot, OCR, QR scan, translate, colour picker, recording)
 - **Shelf** (Island drop zone, item actions)
 
-## M4 — Input power-user features
+## M4 — Input power-user features ✅
+
+Done. Notes on what was built versus the plan below:
+
+- `InputTapService` (`CGEventTapInputService`): one `CGEventTap` at the HID level on
+  the main run loop. Features add closures with a priority (`.safety` > `.high` >
+  `.normal` > `.low`) and interests; the mask is the union of interests plus armed
+  high-frequency types (drags, mouse moved, scroll), and the tap is rebuilt when it
+  changes. It re-enables itself after a timeout, skips events KKit posts, decodes media
+  keys (`NX_SYSDEFINED` subtype 8) and logs handlers slower than 2 ms. Handlers are
+  dropped when their feature stops. It also owns the Caps Lock remap (`hidutil`).
+- The Hyper key is Caps Lock → F18 with `hidutil` (per login session, removed on stop,
+  other mappings kept); the tap adds ⌃⌥⇧⌘ to keys pressed while F18 is down.
+- New services: `WindowService` (`AXWindowService`; AX windows with a cached element
+  per window, CGWindowList for the window list and under the cursor, macOS 15 tiling
+  detection), `AccessibilityService` (`AXAccessibilityService`; frontmost app, menu
+  items cached for 8 s, pressing them, selected text) and `CommandRunnerService` (run
+  any command by id, used by Keyboard bindings and leader sequences).
+- The `m ` menu-items provider lives in the Floating Bar host, not a feature.
+- Brightness is its own small feature (built-in display through the private
+  DisplayServices framework, CoreDisplay fallback) so the Island replaces both the
+  volume and brightness HUDs. Both takeovers are on by default and pass keys to macOS
+  when KKit can't act (no volume control, external display).
+- Per-app volume taps only apps turned below 100% (process tap + private aggregate
+  device + IOProc gain); untouched apps never go through KKit.
+- Drag-to-snap stands aside while macOS 15's own edge tiling is on (a setting).
+- Left for later: the ⌘K "Assign hotkey…" action on Floating Bar results, Quick Note's
+  selected-text context, DDC brightness for external displays, scroll-direction per
+  device.
 
 - **InputTapService** (single shared event tap, keyboard + armed mouse events)
 - **Keyboard**: Hyper key, app launch hotkeys, leader sequences, cheat sheet

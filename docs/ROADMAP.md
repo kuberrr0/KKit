@@ -32,8 +32,7 @@ Done. Notes on what was built versus the plan below:
   Location. Each starts listening only while something subscribes.
 - The Island lives in a fixed-size panel per screen (built-in, main or all screens) and
   hides in full-screen apps unless turned on; clicks pass through its transparent parts.
-  HUDs cover the compact activity for a moment; horizontal scroll switches pages. While
-  the Island is expanded, a HUD takes over the left of its header row instead.
+  HUDs cover the compact activity for a moment; horizontal scroll switches pages.
 - Volume shows its HUD for changes made through KKit; the volume keys still show
   macOS's HUD until the takeover in M4. The red "mic muted" ear is Privacy Indicator's.
 - Quick Toggles: Bluetooth (no public API) and Focus (needs a Shortcuts shortcut) are
@@ -71,11 +70,7 @@ Done. Notes on what was built versus the plan below:
 - **Keyboard**: Hyper key, app launch hotkeys, leader sequences, cheat sheet
 - **Window Management**: snap hotkeys, drag-to-snap, modifier + mouse move/resize, layouts
 - **Clean Mode**
-- Volume and brightness media-key takeover: settings "Replace the macOS volume HUD" and
-  "Replace the macOS brightness HUD", **on by default** (KV, 2026-11-09). They swallow the
-  keys, set the level (DisplayServices for built-in brightness) and show the Island HUD.
-  Without Accessibility the keys keep macOS's own HUD.
-- Push-to-talk, per-app volume (process taps)
+- Volume media-key takeover and push-to-talk, per-app volume (process taps)
 - Menu-items provider (`m `) for the Floating Bar
 
 ## M5 — Menu Bar Manager

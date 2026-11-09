@@ -92,7 +92,7 @@ struct SnapGeometryTests {
 @MainActor
 struct LayoutMatcherTests {
     private func window(_ key: UInt64, _ bundleID: String, _ title: String, frame: CGRect = .zero) -> WindowInfo {
-        WindowInfo(ref: WindowRef(pid: 1, key: key), title: title, appName: bundleID, bundleID: bundleID, frame: frame)
+        WindowInfo(ref: WindowHandle(pid: 1, key: key), title: title, appName: bundleID, bundleID: bundleID, frame: frame)
     }
 
     @Test func matchesByTitleThenOrder() {
@@ -195,8 +195,8 @@ struct WindowsControllerTests {
         #expect(controller.layouts.map(\.name) == ["Desk"])
         #expect(env.island.huds.last?.id == "windows.layout")
 
-        await env.windows.setFrame(CGRect(x: 0, y: 0, width: 300, height: 300), of: WindowRef(pid: 100, key: 1))
-        await env.windows.setFrame(CGRect(x: 0, y: 0, width: 300, height: 300), of: WindowRef(pid: 100, key: 2))
+        await env.windows.setFrame(CGRect(x: 0, y: 0, width: 300, height: 300), of: WindowHandle(pid: 100, key: 1))
+        await env.windows.setFrame(CGRect(x: 0, y: 0, width: 300, height: 300), of: WindowHandle(pid: 100, key: 2))
         try await controller.restoreLayout(named: "desk")
         #expect(env.windows.frame(of: 1) == original)
         #expect(env.windows.frame(of: 2) == CGRect(x: 800, y: 100, width: 500, height: 500))

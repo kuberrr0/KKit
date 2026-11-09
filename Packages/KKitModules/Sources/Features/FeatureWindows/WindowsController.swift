@@ -27,9 +27,9 @@ final class WindowsController {
     private let storage: FeatureStorage
     private let island: FeatureIsland
     /// Frames before KKit first moved each window, for Restore.
-    @ObservationIgnored private var restoreFrames: [WindowRef: CGRect] = [:]
+    @ObservationIgnored private var restoreFrames: [WindowHandle: CGRect] = [:]
     /// The last snap, so pressing the same shortcut again cycles sizes.
-    @ObservationIgnored private var lastSnap: (action: SnapAction, window: WindowRef, frame: CGRect, cycle: Int)?
+    @ObservationIgnored private var lastSnap: (action: SnapAction, window: WindowHandle, frame: CGRect, cycle: Int)?
 
     static let layoutsFile = "layouts"
 

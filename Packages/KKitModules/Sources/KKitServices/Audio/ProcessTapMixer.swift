@@ -185,7 +185,7 @@ final class AppTap {
     init(process: AudioObjectID, outputUID: String, gain: Float) throws {
         self.gain = TapGain(gain)
 
-        let description = CATapDescription(stereoMixdownOfProcesses: [NSNumber(value: process)])
+        let description = CATapDescription(stereoMixdownOfProcesses: [process])
         description.uuid = UUID()
         description.name = "KKit app volume"
         description.isPrivate = true

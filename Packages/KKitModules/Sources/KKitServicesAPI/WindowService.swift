@@ -3,7 +3,7 @@ import Foundation
 
 /// A window of another app, as the window service knows it. The reference stays valid
 /// while the window exists.
-public struct WindowRef: Hashable, Sendable {
+public struct WindowHandle: Hashable, Sendable {
     /// The owning process.
     public var pid: Int32
     /// The service's own key for the window's accessibility element.
@@ -16,7 +16,7 @@ public struct WindowRef: Hashable, Sendable {
 }
 
 public struct WindowInfo: Hashable, Sendable, Identifiable {
-    public var ref: WindowRef
+    public var ref: WindowHandle
     public var title: String
     public var appName: String
     public var bundleID: String?
@@ -28,7 +28,7 @@ public struct WindowInfo: Hashable, Sendable, Identifiable {
     public var isResizable: Bool
 
     public init(
-        ref: WindowRef,
+        ref: WindowHandle,
         title: String,
         appName: String,
         bundleID: String?,
@@ -47,7 +47,7 @@ public struct WindowInfo: Hashable, Sendable, Identifiable {
         self.isResizable = isResizable
     }
 
-    public var id: WindowRef { ref }
+    public var id: WindowHandle { ref }
 }
 
 public struct WindowError: LocalizedError, Sendable {
@@ -76,12 +76,12 @@ public protocol WindowService: AnyObject, Sendable {
     func window(at point: CGPoint) async -> WindowInfo?
     /// Standard windows of regular apps on the current Space, front to back.
     func visibleWindows() async -> [WindowInfo]
-    func info(for window: WindowRef) async -> WindowInfo?
+    func info(for window: WindowHandle) async -> WindowInfo?
     /// Moves and resizes. Some apps round sizes or refuse; read `info` to see the result.
-    func setFrame(_ frame: CGRect, of window: WindowRef) async
-    func setOrigin(_ origin: CGPoint, of window: WindowRef) async
+    func setFrame(_ frame: CGRect, of window: WindowHandle) async
+    func setOrigin(_ origin: CGPoint, of window: WindowHandle) async
     /// Brings the window and its app to the front.
-    func raise(_ window: WindowRef) async
+    func raise(_ window: WindowHandle) async
     /// macOS 15's "Tile by dragging windows to screen edges" is on.
     var isSystemEdgeTilingEnabled: Bool { get }
 }

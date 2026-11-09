@@ -39,23 +39,23 @@ public final class AXWindowService: WindowService {
         return await engine.windows(matching: listed).compactMap(decorate)
     }
 
-    public func info(for window: WindowRef) async -> WindowInfo? {
+    public func info(for window: WindowHandle) async -> WindowInfo? {
         guard let raw = await engine.info(window.key) else { return nil }
         return decorate(raw)
     }
 
-    public func setFrame(_ frame: CGRect, of window: WindowRef) async {
+    public func setFrame(_ frame: CGRect, of window: WindowHandle) async {
         await engine.setFrame(AX.flip(frame), key: window.key)
     }
 
-    public func setOrigin(_ origin: CGPoint, of window: WindowRef) async {
+    public func setOrigin(_ origin: CGPoint, of window: WindowHandle) async {
         guard let current = await engine.info(window.key) else { return }
         // AppKit origin is the bottom-left corner; Accessibility wants the top-left.
         let flipped = AX.flip(CGRect(origin: origin, size: current.frame.size))
         await engine.setPosition(flipped.origin, key: window.key)
     }
 
-    public func raise(_ window: WindowRef) async {
+    public func raise(_ window: WindowHandle) async {
         await engine.raise(window.key)
         NSRunningApplication(processIdentifier: window.pid)?.activate()
     }
@@ -73,7 +73,7 @@ public final class AXWindowService: WindowService {
     private func decorate(_ raw: AXWindowEngine.RawWindow) -> WindowInfo? {
         let app = NSRunningApplication(processIdentifier: raw.pid)
         return WindowInfo(
-            ref: WindowRef(pid: raw.pid, key: raw.key),
+            ref: WindowHandle(pid: raw.pid, key: raw.key),
             title: raw.title,
             appName: app?.localizedName ?? raw.ownerName ?? "",
             bundleID: app?.bundleIdentifier,

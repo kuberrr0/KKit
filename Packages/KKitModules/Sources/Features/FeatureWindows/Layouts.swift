@@ -22,9 +22,9 @@ struct WindowLayout: Codable, Hashable, Identifiable, Sendable {
 /// Matching a layout's entries to the windows open now, kept pure for tests.
 enum LayoutMatcher {
     /// For each app, windows with the same title first, then the rest in order.
-    static func assignments(for layout: WindowLayout, windows: [WindowInfo]) -> [(WindowRef, CGRect)] {
-        var result: [(WindowRef, CGRect)] = []
-        var used: Set<WindowRef> = []
+    static func assignments(for layout: WindowLayout, windows: [WindowInfo]) -> [(WindowHandle, CGRect)] {
+        var result: [(WindowHandle, CGRect)] = []
+        var used: Set<WindowHandle> = []
         let byApp = Dictionary(grouping: layout.entries, by: \.bundleID)
         for (bundleID, entries) in byApp {
             let candidates = windows.filter { $0.bundleID == bundleID && !$0.isMinimized && !$0.isFullScreen }

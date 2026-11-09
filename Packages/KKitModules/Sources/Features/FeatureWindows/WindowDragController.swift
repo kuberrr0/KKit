@@ -246,7 +246,7 @@ final class WindowDragController {
     }
 
     /// One Accessibility call at a time; newer frames replace the pending one.
-    private func applyPending(window: WindowRef, moveOnly: Bool) {
+    private func applyPending(window: WindowHandle, moveOnly: Bool) {
         guard !isApplying else { return }
         isApplying = true
         let windows = windows
@@ -334,8 +334,7 @@ final class WindowDragController {
         let windows = windows
         Task { [weak self] in
             guard let now = await windows.info(for: window.ref),
-                  !WindowsController.isClose(now.frame, window.frame, tolerance: 1) || now.frame.size == window.frame.size,
-                  now.frame.origin != window.frame.origin else { return }
+                  !WindowsController.isClose(now.frame, window.frame, tolerance: 1) else { return }
             guard let self, self.snapDrag?.zone == zone else { return }
             self.snapDrag?.showingPreview = true
             self.showPreview(zone: zone, window: now, cursor: cursor)

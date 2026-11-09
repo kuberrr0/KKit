@@ -184,8 +184,8 @@ public final class FakeWindowService: WindowService {
     public var focusedKey: UInt64?
     public var isTrusted = true
     public var isSystemEdgeTilingEnabled = false
-    public private(set) var raised: [WindowRef] = []
-    public private(set) var frameChanges: [(WindowRef, CGRect)] = []
+    public private(set) var raised: [WindowHandle] = []
+    public private(set) var frameChanges: [(WindowHandle, CGRect)] = []
 
     public init() {}
 
@@ -198,7 +198,7 @@ public final class FakeWindowService: WindowService {
         bundleID: String? = "com.example.app",
         pid: Int32 = 100
     ) -> WindowInfo {
-        let info = WindowInfo(ref: WindowRef(pid: pid, key: key), title: title, appName: appName, bundleID: bundleID, frame: frame)
+        let info = WindowInfo(ref: WindowHandle(pid: pid, key: key), title: title, appName: appName, bundleID: bundleID, frame: frame)
         windows.append(info)
         return info
     }
@@ -219,24 +219,24 @@ public final class FakeWindowService: WindowService {
         windows
     }
 
-    public func info(for window: WindowRef) async -> WindowInfo? {
+    public func info(for window: WindowHandle) async -> WindowInfo? {
         windows.first { $0.ref == window }
     }
 
-    public func setFrame(_ frame: CGRect, of window: WindowRef) async {
+    public func setFrame(_ frame: CGRect, of window: WindowHandle) async {
         guard let index = windows.firstIndex(where: { $0.ref == window }) else { return }
         windows[index].frame = frame
         frameChanges.append((window, frame))
     }
 
-    public func setOrigin(_ origin: CGPoint, of window: WindowRef) async {
+    public func setOrigin(_ origin: CGPoint, of window: WindowHandle) async {
         guard let index = windows.firstIndex(where: { $0.ref == window }) else { return }
         let frame = CGRect(origin: origin, size: windows[index].frame.size)
         windows[index].frame = frame
         frameChanges.append((window, frame))
     }
 
-    public func raise(_ window: WindowRef) async {
+    public func raise(_ window: WindowHandle) async {
         raised.append(window)
     }
 

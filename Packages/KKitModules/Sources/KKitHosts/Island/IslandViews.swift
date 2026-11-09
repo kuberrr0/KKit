@@ -251,13 +251,22 @@ struct IslandExpandedView: View {
         let side = max(0, (width - geometry.centerWidth) / 2 - KKSpacing.l)
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                if let selected {
-                    Label(selected.title, systemImage: selected.symbol)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .lineLimit(1)
-                        .frame(width: side, alignment: .leading)
+                // A HUD (volume, brightness, …) takes over the left of the header
+                // while it's up, so changes made while expanded stay visible.
+                Group {
+                    if let hud = model.hud?.hud {
+                        ExpandedHUDRow(hud: hud)
+                            .transition(.opacity)
+                    } else if let selected {
+                        Label(selected.title, systemImage: selected.symbol)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.7))
+                            .lineLimit(1)
+                            .transition(.opacity)
+                    }
                 }
+                .frame(width: side, alignment: .leading)
+                .animation(.easeOut(duration: 0.15), value: model.hud == nil)
                 Spacer(minLength: geometry.centerWidth)
                 HStack(spacing: KKSpacing.xs) {
                     ForEach(pages) { page in
@@ -296,6 +305,26 @@ struct IslandExpandedView: View {
             .padding(.top, KKSpacing.s)
             .padding(.bottom, KKSpacing.m)
         }
+    }
+}
+
+/// A HUD squeezed into the expanded Island's header: symbol, optional title, level.
+struct ExpandedHUDRow: View {
+    let hud: IslandHUD
+
+    var body: some View {
+        HStack(spacing: KKSpacing.s) {
+            HUDSymbol(hud: hud)
+            if let title = hud.title {
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+            }
+            HUDTrailing(hud: hud)
+        }
+        .lineLimit(1)
+        .accessibilityElement(children: .combine)
     }
 }
 

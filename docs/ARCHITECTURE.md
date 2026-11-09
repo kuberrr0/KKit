@@ -217,9 +217,11 @@ public extension Feature {
 }
 ```
 
-> **As built (M0):** the protocol currently has `commands`, `quickToggles` and
-> `settingsPane`. The other contributions are added together with the host that shows
-> them (Island pages in M1, search providers and result actions in M2).
+> **As built (M1):** the protocol has `commands`, `quickToggles`, `menuBarSections`
+> (sliders and strips in the menu bar popover, ordered by `order`), `menuBarItems`,
+> `islandPages` and `settingsPane`. Search providers and result actions arrive with the
+> Floating Bar (M2). Feature classes are `public` so the app's `FeatureCatalog` can list
+> them; everything else in a feature stays internal.
 
 *Static* contributions (commands, toggles, providers, panes) are declared as properties.
 *Dynamic* things (an activity that appears when recording starts) go through services on
@@ -247,8 +249,11 @@ public struct FeatureContext {
 > `events` and `services`. KKitCore can't see the service protocols (they live in
 > `KKitServicesAPI`, which depends on KKitCore), so `KKitServicesAPI` adds
 > `context.permissions`, `context.hotkeys`, `context.overlays` and `context.storage` as
-> extensions resolved from the registry. `context.island` and `context.input` follow the
-> same pattern when those services land. Publish a service with
+> extensions resolved from the registry. M1 adds `context.island` (a `FeatureIsland`
+> that fills in the owner), `context.audio`, `context.deviceUsage`, `context.power`,
+> `context.display`, `context.systemInfo`, `context.notifications`,
+> `context.systemActions` and `context.location` the same way; `context.input` follows
+> in M4. Publish a service with
 > `context.services.publish((any ShelfServicing).self, controller)`; it is removed
 > automatically when the feature stops.
 
@@ -340,6 +345,13 @@ public struct IslandActivity: Identifiable {
 The host owns: one `NSPanel` per screen, notch geometry (`auxiliaryTopLeftArea` /
 `auxiliaryTopRightArea`), pill fallback for non-notch screens, hover/click/scroll/drop
 handling, priority queue, and animation. Features only provide content.
+
+> **As built (M1):** `IslandService` in `KKitServicesAPI` has `present(_:owner:)` →
+> `IslandHandle` (`update`, `dismiss`, `isActive`), `showHUD(_:owner:)` with an
+> `IslandHUD` value (symbol, title, level bar, detail, tint), `dismissAll(owner:)` and
+> `setScrollHandler(_:owner:)` (the newest handler gets vertical scrolls; Volume uses it).
+> `IslandHost` in `KKitHosts` implements it, with the state in a testable
+> `IslandModel`. The host drops a feature's activities and HUD when it stops.
 
 The Island also exposes a **drop target** to the Shelf: when a drag nears the notch, the
 host asks every running feature that registered a `DropHandler` (Shelf, AirDrop action,
@@ -540,22 +552,22 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 
 | Feature | Island | Floating Bar | Menu bar | Hotkeys | Input tap | Overlay | Audio | Display | Power | SysInfo | Pasteboard | Capture | AX | Storage | Permissions needed |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Volume & Audio | ● HUD, mic muted | ● cmds | ● sliders, devices | ● | ● media keys, push-to-talk | | ● | | | | | | | ○ | Accessibility (keys) |
+| Volume & Audio | ● HUD, scroll | ● cmds | ● slider, devices, tile | ● | ○ media keys, push-to-talk (M4) | | ● | | | | | | | | Accessibility (keys, M4) |
 | Floating Bar host | | — | | ● | | ● | | | | | | | ○ menus | ● frecency | Accessibility (menu items), Automation (tabs) |
 | Stats | ● alerts, page | ● cmds | ● items | | | | | | ● battery | ● | | | | ○ history | — |
-| Power | ● indicator | ● cmds | ● tile | ● | | | | | ● | | | | | | — |
+| Power | ● indicator, page | ● cmds | ● tile | ● | | | | ○ external display | ● | | | | | | — |
 | Island host | — | | | | | ● | ○ | | | | | | | | Automation (now playing fallback) |
 | Screen Tools | ● thumbnail, rec | ● cmds | ● | ● | | ● picker | ○ audio | | | | ● copy | ● | | ● | Screen Recording, Microphone |
 | Clipboard | ○ flash | ● provider, mode | ● | ● | | ● picker | | | | | ● | | ● paste | ● SQLite | Accessibility, pasteboard access |
 | Shelf | ● drop zone, page | ● actions | ○ | ● | | | | | | | | | | ● | — |
 | Keyboard | ○ cheat sheet | ● assign hotkey | | ● | ● Hyper, leaders | ● cheat sheet | | | | | | | | ● | Accessibility, Input Monitoring |
-| Night Shift | ○ | ● cmds | ● tile, slider | ● | | ● dim overlay | | ● gamma | ● wake | | | | | | Location (optional) |
+| Night Shift | | ● cmds | ● tile, slider | ● | | | | ● gamma, dim, wake | | | | | | | Location (optional) |
 | Quick Note | ○ "saved" | ● mode, provider | | ● | | | | | | | ○ | | ○ selection | ● bookmark | — (folder picked by user) |
 | Window Management | | ● cmds | | ● | ● modifier + mouse, drag snap | ● snap preview | | | | | | | ● WindowService | ● layouts | Accessibility |
 | Menu Bar Manager | | ● `m ` provider | ● separators | ● | | ● drop-down bar | | | | | | ○ icon images | ● MenuBarItems | ● | Accessibility, Screen Recording |
 | Quick Toggles | | ● cmds | ● tiles | ● | | ○ hide desktop | | | | | | | | | Automation (per toggle) |
-| Privacy Indicator | ● ear, page | | | | | | ● DeviceUsage | | | | | | | ○ log | — |
-| Timer | ● countdown, alert | ● cmds | ● tile | ● | | | | | | | | | | ○ history | Notifications (optional) |
+| Privacy Indicator | ● ear, page | ● cmd | | | | | ● DeviceUsage, mute | | | | | | | ○ log | — |
+| Timer | ● countdowns, alert, page | ● cmds | ● tile | ● | | | | | | | | | | ● saved timers | Notifications (optional) |
 | Calculator | | ● `=` provider | | | | | | | | | ● copy | | | ● rate cache | — |
 | Clean Mode | | ● cmd | ● tile | ● | ● swallow all | ● lock overlay | | | | | | | | | Accessibility, Input Monitoring |
 

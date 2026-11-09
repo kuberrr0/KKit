@@ -111,6 +111,8 @@ final class PanelHandle: OverlayHandle {
     private func apply(_ configuration: OverlayConfiguration) {
         guard let panel else { return }
         switch configuration.level {
+        case .aboveDesktopIcons:
+            panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
         case .floating: panel.level = .floating
         case .statusBar: panel.level = .statusBar
         case .screenSaver: panel.level = .screenSaver

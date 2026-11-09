@@ -17,6 +17,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var features: FeatureManager?
     private var menuBar: MenuBarHost?
     private var settingsHost: SettingsHost?
+    private var island: IslandHost?
+    private var workspaceEvents: WorkspaceEventsPublisher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = MainMenu.make(target: self)
@@ -37,6 +39,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         services.register((any HotkeyService).self, hotkeys)
         services.register((any OverlayService).self, overlays)
         services.register((any StorageService).self, storage)
+
+        // System services (M1). Each only starts listening when something subscribes.
+        services.register((any AudioService).self, CoreAudioService())
+        services.register((any DeviceUsageService).self, SystemDeviceUsageService())
+        services.register((any PowerService).self, IOKitPowerService(events: events))
+        services.register((any DisplayService).self, CoreGraphicsDisplayService(events: events))
+        services.register((any SystemInfoService).self, MachSystemInfoService())
+        services.register((any NotificationService).self, UserNotificationService())
+        services.register((any SystemActionsService).self, MacSystemActionsService())
+        services.register((any LocationService).self, CoreLocationService())
+        workspaceEvents = WorkspaceEventsPublisher(events: events)
 
         let features = FeatureManager(
             catalog: FeatureCatalog.all,
@@ -59,6 +72,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             permissions: permissions,
             hotkeys: hotkeys
         )
+        // The Island is a host and a service: features present activities through it.
+        let island = IslandHost(dependencies: dependencies, events: events)
+        services.register((any IslandService).self, island)
+        self.island = island
         menuBar = MenuBarHost(dependencies: dependencies)
         settingsHost = SettingsHost(dependencies: dependencies)
         registerAppCommands()

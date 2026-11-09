@@ -22,7 +22,23 @@ KKit's own commands (`app.openSettings`, `app.openMenu`) show in Settings › Sh
   Shortcuts and Permissions pages)
 - GitHub Actions CI building and testing on macOS
 
-## M1 — Low-permission essentials + Island
+## M1 — Low-permission essentials + Island ✅
+
+Done. Notes on what was built versus the plan below:
+
+- The `Feature` protocol gained `menuBarSections`, `menuBarItems` and `islandPages`.
+  New services in `KKitServicesAPI` (with fakes in `KKitServicesTesting`): Island,
+  Audio, DeviceUsage, Power, Display, SystemInfo, Notifications, SystemActions,
+  Location. Each starts listening only while something subscribes.
+- The Island lives in a fixed-size panel per screen (built-in, main or all screens) and
+  hides in full-screen apps unless turned on; clicks pass through its transparent parts.
+  HUDs cover the compact activity for a moment; horizontal scroll switches pages.
+- Volume shows its HUD for changes made through KKit; the volume keys still show
+  macOS's HUD until the takeover in M4. The red "mic muted" ear is Privacy Indicator's.
+- Quick Toggles: Bluetooth (no public API) and Focus (needs a Shortcuts shortcut) are
+  left out for now; "keep the screen saver off" is Power's Awake tile.
+- Timer's backup `UNNotification` isn't scheduled; timers are saved instead and the
+  ones that ended while KKit was closed are announced on launch.
 
 - **Island host** (compact, HUD, expanded; pill fallback for non-notch screens)
 - **Power** (assertions, durations, Island indicator)

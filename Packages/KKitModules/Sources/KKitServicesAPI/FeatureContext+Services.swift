@@ -1,6 +1,7 @@
 import KKitCore
 
-/// Typed access to the core services every feature can use.
+/// Typed access to the core services every feature can use. The app registers all
+/// of them at launch (and `TestEnvironment` registers fakes), so `require` is safe.
 public extension FeatureContext {
     var permissions: any PermissionsService {
         services.require((any PermissionsService).self)
@@ -16,5 +17,42 @@ public extension FeatureContext {
 
     var storage: FeatureStorage {
         FeatureStorage(featureID: id, service: services.require((any StorageService).self))
+    }
+
+    /// The Island host. Activities are dropped automatically when the feature stops.
+    var island: FeatureIsland {
+        FeatureIsland(owner: id, service: services.require((any IslandService).self))
+    }
+
+    var audio: any AudioService {
+        services.require((any AudioService).self)
+    }
+
+    var deviceUsage: any DeviceUsageService {
+        services.require((any DeviceUsageService).self)
+    }
+
+    var power: any PowerService {
+        services.require((any PowerService).self)
+    }
+
+    var display: any DisplayService {
+        services.require((any DisplayService).self)
+    }
+
+    var systemInfo: any SystemInfoService {
+        services.require((any SystemInfoService).self)
+    }
+
+    var notifications: any NotificationService {
+        services.require((any NotificationService).self)
+    }
+
+    var systemActions: any SystemActionsService {
+        services.require((any SystemActionsService).self)
+    }
+
+    var location: any LocationService {
+        services.require((any LocationService).self)
     }
 }

@@ -6,8 +6,15 @@ import Foundation
 /// New cases are added with the features that need them; `custom` is the escape hatch.
 public enum AppEvent: Sendable, Hashable {
     case featureStateChanged(FeatureID)
+    /// Screens were added, removed, rearranged or changed resolution.
     case displaysChanged
     case frontmostAppChanged(bundleID: String?)
+    case systemWillSleep
+    case systemDidWake
+    /// The displays went to sleep or woke up (without the whole Mac sleeping).
+    case screensDidSleep
+    case screensDidWake
+    case powerSourceChanged(isOnAC: Bool)
     case custom(name: String, payload: [String: String])
 }
 

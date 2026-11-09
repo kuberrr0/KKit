@@ -164,6 +164,15 @@ public struct TestEnvironment {
     public let hotkeys: FakeHotkeyService
     public let overlays: FakeOverlayService
     public let storage: InMemoryStorageService
+    public let island: FakeIslandService
+    public let audio: FakeAudioService
+    public let deviceUsage: FakeDeviceUsageService
+    public let power: FakePowerService
+    public let display: FakeDisplayService
+    public let systemInfo: FakeSystemInfoService
+    public let notifications: FakeNotificationService
+    public let systemActions: FakeSystemActionsService
+    public let location: FakeLocationService
 
     /// - Parameter granted: permissions that start granted.
     public init(granted: Set<Permission> = []) {
@@ -178,10 +187,35 @@ public struct TestEnvironment {
         hotkeys = FakeHotkeyService()
         overlays = FakeOverlayService()
         storage = InMemoryStorageService()
+        island = FakeIslandService()
+        audio = FakeAudioService()
+        deviceUsage = FakeDeviceUsageService()
+        power = FakePowerService()
+        display = FakeDisplayService()
+        systemInfo = FakeSystemInfoService()
+        notifications = FakeNotificationService()
+        systemActions = FakeSystemActionsService()
+        location = FakeLocationService()
         services.register((any PermissionsService).self, permissions)
         services.register((any HotkeyService).self, hotkeys)
         services.register((any OverlayService).self, overlays)
         services.register((any StorageService).self, storage)
+        services.register((any IslandService).self, island)
+        services.register((any AudioService).self, audio)
+        services.register((any DeviceUsageService).self, deviceUsage)
+        services.register((any PowerService).self, power)
+        services.register((any DisplayService).self, display)
+        services.register((any SystemInfoService).self, systemInfo)
+        services.register((any NotificationService).self, notifications)
+        services.register((any SystemActionsService).self, systemActions)
+        services.register((any LocationService).self, location)
+    }
+
+    /// Lets queued main-actor work (stream deliveries) run.
+    public func settle(_ rounds: Int = 5) async {
+        for _ in 0..<rounds {
+            await Task.yield()
+        }
     }
 
     public func makeFeatureManager(catalog: [any Feature.Type]) -> FeatureManager {

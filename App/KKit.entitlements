@@ -8,5 +8,8 @@
 	<true/>
 	<key>com.apple.security.automation.apple-events</key>
 	<true/>
+	<!-- Night Shift's sunset schedule asks for the location once. -->
+	<key>com.apple.security.personal-information.location</key>
+	<true/>
 </dict>
 </plist>

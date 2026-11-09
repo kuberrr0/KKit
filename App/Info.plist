@@ -40,5 +40,7 @@
 	<string>KKit controls apps such as Finder or Music only when you run a command that needs it.</string>
 	<key>NSLocationUsageDescription</key>
 	<string>KKit uses your approximate location to work out sunset and sunrise times for Night Shift.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>KKit uses your approximate location to work out sunset and sunrise times for Night Shift.</string>
 </dict>
 </plist>

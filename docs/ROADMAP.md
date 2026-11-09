@@ -106,6 +106,9 @@ Done. Notes on what was built versus the plan below:
 - Calculator's ⌘↵ paste and Quick Note's selected-text context still wait (paste is
   available now; selection needs the M4 Accessibility service).
 - Translation needs macOS 15 (Apple's on-device framework); on 14 the card says so.
+- Later, after testing: the colour picker moved out of Screen Tools into its own
+  *Colour Picker* feature (⌃⌥P, Island swatch and Colours page, `#` and typed colours in
+  the Floating Bar), because "color picker" found nothing in the Floating Bar.
 - Left for later: clipboard encryption at rest, screenshot annotation, GIF export and
   keystroke overlay, multi-item drag-out and the mini shelf. See each feature's README.
 

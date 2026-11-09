@@ -57,7 +57,7 @@ enum ScreenToolsError: LocalizedError {
     }
 }
 
-/// Screenshots, text and code scanning, translation, the colour picker and recording.
+/// Screenshots, text and code scanning, translation and recording.
 /// The commands call into this; the Island pages and the settings pane read it.
 @MainActor
 @Observable
@@ -74,7 +74,6 @@ final class ScreenToolsController {
     var recording: (any ScreenRecording)?
     /// The last finished recording.
     var lastRecordingURL: URL?
-    var colorHistory: [String] = []
 
     /// A picker or capture is on screen; a second command waits its turn.
     @ObservationIgnored private var isPicking = false
@@ -82,7 +81,6 @@ final class ScreenToolsController {
     @ObservationIgnored private var resultTasks: [String: Task<Void, Never>] = [:]
     @ObservationIgnored var pins: [UUID: any OverlayHandle] = [:]
     @ObservationIgnored var translationPanel: (any OverlayHandle)?
-    @ObservationIgnored var colorSampler: NSColorSampler?
     @ObservationIgnored var recordingHandle: (any IslandHandle)?
 
     /// Overridable for tests.
@@ -92,7 +90,6 @@ final class ScreenToolsController {
 
     init(context: FeatureContext) {
         self.context = context
-        colorHistory = context.settings[ScreenToolsSettings.colorHistory]
     }
 
     /// Closes pins, cards and Island results (the feature stopped).

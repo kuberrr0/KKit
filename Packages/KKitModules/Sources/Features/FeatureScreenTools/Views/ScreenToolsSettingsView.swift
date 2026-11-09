@@ -23,7 +23,6 @@ struct ScreenToolsSettingsView: View {
     @Setting(ScreenToolsSettings.ocrLanguage) private var ocrLanguage
     @Setting(ScreenToolsSettings.openScannedLinks) private var openScannedLinks
     @Setting(ScreenToolsSettings.translateTarget) private var translateTarget
-    @Setting(ScreenToolsSettings.colorFormat) private var colorFormat
     @Setting(ScreenToolsSettings.recordSystemAudio) private var recordSystemAudio
     @Setting(ScreenToolsSettings.recordMicrophone) private var recordMicrophone
     @Setting(ScreenToolsSettings.showClicks) private var showClicks
@@ -59,7 +58,6 @@ struct ScreenToolsSettingsView: View {
                     }
                 }
             }
-            colors
             recording
         }
         .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
@@ -108,40 +106,6 @@ struct ScreenToolsSettingsView: View {
             Toggle(String(localized: "Include the pointer"), isOn: $showCursor)
             Stepper(value: $timerSeconds, in: 1...30) {
                 LabeledContent(String(localized: "Timed screenshot after"), value: String(localized: "\(timerSeconds) s"))
-            }
-        }
-    }
-
-    private var colors: some View {
-        KKSection(
-            String(localized: "Colour Picker"),
-            footer: String(localized: "Click a colour to copy it again.")
-        ) {
-            Picker(String(localized: "Copy as"), selection: $colorFormat) {
-                ForEach(ColorFormat.allCases) { format in
-                    Text(format.title).tag(format)
-                }
-            }
-            if let sample = controller.colorHistory.first.flatMap(RGBAColor.init(hex:)) {
-                LabeledContent(String(localized: "Example"), value: ColorFormatter.string(sample, as: colorFormat))
-                    .textSelection(.enabled)
-            }
-            if !controller.colorHistory.isEmpty {
-                HStack(spacing: KKSpacing.xs) {
-                    ForEach(controller.colorHistory.prefix(12), id: \.self) { hex in
-                        if let color = RGBAColor(hex: hex) {
-                            Button {
-                                controller.copyColor(color)
-                            } label: {
-                                KKSwatch(Color(.sRGB, red: color.red, green: color.green, blue: color.blue, opacity: color.alpha), size: 20)
-                            }
-                            .buttonStyle(.plain)
-                            .help(hex)
-                        }
-                    }
-                    Spacer()
-                    Button(String(localized: "Clear")) { controller.clearColorHistory() }
-                }
             }
         }
     }

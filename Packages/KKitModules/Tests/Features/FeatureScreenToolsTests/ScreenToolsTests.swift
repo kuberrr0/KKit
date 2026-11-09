@@ -34,39 +34,6 @@ struct CaptureFileNamerTests {
     }
 }
 
-struct ColorFormatterTests {
-    private let orange = RGBAColor(red: 1, green: 0.5, blue: 0)
-
-    @Test func formats() {
-        #expect(ColorFormatter.string(orange, as: .rgb) == "rgb(255, 128, 0)")
-        #expect(ColorFormatter.string(orange, as: .hsl) == "hsl(30, 100%, 50%)")
-        #expect(ColorFormatter.string(orange, as: .css) == "rgb(255 128 0)")
-        #expect(ColorFormatter.string(orange, as: .swiftUI) == "Color(red: 1, green: 0.5, blue: 0)")
-        #expect(ColorFormatter.string(orange, as: .nsColor) == "NSColor(srgbRed: 1, green: 0.5, blue: 0, alpha: 1)")
-        #expect(ColorFormatter.string(orange, as: .hex) == orange.hex)
-    }
-
-    @Test func includesAlphaWhenTranslucent() {
-        let clear = RGBAColor(red: 0, green: 0, blue: 1, alpha: 0.5)
-        #expect(ColorFormatter.string(clear, as: .rgb) == "rgba(0, 0, 255, 0.5)")
-        #expect(ColorFormatter.string(clear, as: .css) == "rgb(0 0 255 / 50%)")
-        #expect(ColorFormatter.string(clear, as: .hsl) == "hsla(240, 100%, 50%, 0.5)")
-    }
-
-    @Test func greysHaveNoHue() {
-        let (hue, saturation, lightness) = ColorFormatter.hsl(RGBAColor(red: 0.5, green: 0.5, blue: 0.5))
-        #expect(hue == 0)
-        #expect(saturation == 0)
-        #expect(abs(lightness - 0.5) < 0.0001)
-    }
-
-    @Test func trimsDecimals() {
-        #expect(ColorFormatter.decimal(0.5, places: 3) == "0.5")
-        #expect(ColorFormatter.decimal(1, places: 3) == "1")
-        #expect(ColorFormatter.decimal(0.50196, places: 3) == "0.502")
-    }
-}
-
 struct ScannedLinkTests {
     @Test func findsLinks() {
         #expect(ScreenToolsController.link(in: "https://kkit.app/x")?.host() == "kkit.app")
@@ -169,18 +136,6 @@ struct ScreenshotFlowTests {
         controller.unpinAll()
         #expect(controller.pinCount == 0)
         #expect(environment.overlays.openPanels.isEmpty)
-    }
-
-    @Test func remembersColours() throws {
-        let (environment, controller, _) = try makeController()
-        controller.copyColor(RGBAColor(red: 1, green: 0, blue: 0))
-        controller.copyColor(RGBAColor(red: 0, green: 0, blue: 1))
-        controller.copyColor(RGBAColor(red: 1, green: 0, blue: 0))
-        #expect(controller.colorHistory == [RGBAColor(red: 1, green: 0, blue: 0).hex, RGBAColor(red: 0, green: 0, blue: 1).hex])
-        #expect(environment.pasteboard.writes.last?.string == RGBAColor(red: 1, green: 0, blue: 0).hex)
-        controller.settings[ScreenToolsSettings.colorFormat] = .rgb
-        controller.copyColor(RGBAColor(red: 0, green: 1, blue: 0))
-        #expect(environment.pasteboard.writes.last?.string == "rgb(0, 255, 0)")
     }
 
     @Test func recordsAndStops() async throws {

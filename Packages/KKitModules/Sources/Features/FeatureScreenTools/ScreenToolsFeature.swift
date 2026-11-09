@@ -4,15 +4,15 @@ import KKitServicesAPI
 import KKitUI
 import SwiftUI
 
-/// Screen Tools: screenshots, text and code scanning, translation, the colour picker
-/// and screen recording. DESIGN.md §3.6.
+/// Screen Tools: screenshots, text and code scanning, translation and screen recording.
+/// DESIGN.md §3.6. The colour picker is its own feature (FeatureColorPicker).
 @MainActor
 public final class ScreenToolsFeature: Feature {
     public static let manifest = FeatureManifest(
         id: "screenTools",
         name: String(localized: "Screen Tools"),
         symbol: "camera.viewfinder",
-        summary: String(localized: "Screenshots, text and QR scanning, translation, a colour picker and screen recording."),
+        summary: String(localized: "Screenshots, text and QR scanning, translation and screen recording."),
         category: .capture,
         optionalPermissions: [.screenRecording, .microphone],
         enabledByDefault: true
@@ -114,15 +114,6 @@ public final class ScreenToolsFeature: Feature {
                 keywords: ["translate", "language", "clipboard"]
             ) { _ in
                 controller.translateClipboard()
-            },
-            Command(
-                id: "screenTools.pickColor",
-                title: String(localized: "Pick Colour"),
-                subtitle: String(localized: "Copies the colour under the loupe"),
-                symbol: "eyedropper",
-                keywords: ["color", "colour", "picker", "hex", "eyedropper"]
-            ) { _ in
-                await controller.pickColor()
             },
             Command(
                 id: "screenTools.recordArea",

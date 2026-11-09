@@ -180,49 +180,6 @@ extension ScreenToolsController {
     }
 }
 
-// MARK: Colour picker
-
-extension ScreenToolsController {
-    /// The system loupe; the picked colour is copied in the chosen format.
-    func pickColor() async {
-        guard colorSampler == nil else { return }
-        let sampler = NSColorSampler()
-        colorSampler = sampler
-        let color: RGBAColor? = await withCheckedContinuation { continuation in
-            sampler.show { picked in
-                continuation.resume(returning: picked.flatMap(ScreenToolsController.rgba(from:)))
-            }
-        }
-        colorSampler = nil
-        guard let color else { return }
-        copyColor(color)
-    }
-
-    func copyColor(_ color: RGBAColor, format: ColorFormat? = nil) {
-        let text = ColorFormatter.string(color, as: format ?? settings[ScreenToolsSettings.colorFormat])
-        context.pasteboard.copy(text)
-        remember(color)
-        context.island.showHUD(IslandHUD(id: "screenTools.color", symbol: "eyedropper.full", title: text, duration: 2))
-    }
-
-    func remember(_ color: RGBAColor) {
-        var history = colorHistory.filter { $0 != color.hex }
-        history.insert(color.hex, at: 0)
-        colorHistory = Array(history.prefix(ScreenToolsSettings.maxColorHistory))
-        settings[ScreenToolsSettings.colorHistory] = colorHistory
-    }
-
-    func clearColorHistory() {
-        colorHistory = []
-        settings[ScreenToolsSettings.colorHistory] = []
-    }
-
-    nonisolated static func rgba(from color: NSColor) -> RGBAColor? {
-        guard let srgb = color.usingColorSpace(.sRGB) else { return nil }
-        return RGBAColor(red: Double(srgb.redComponent), green: Double(srgb.greenComponent), blue: Double(srgb.blueComponent), alpha: Double(srgb.alphaComponent))
-    }
-}
-
 // MARK: Recording
 
 enum RecordingMode: Sendable {

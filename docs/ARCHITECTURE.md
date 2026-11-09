@@ -608,6 +608,7 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 | Power | ● indicator, page | ● cmds | ● tile | ● | | | | ○ external display | ● | | | | | | — |
 | Island host | — | | | | | ● | ○ | | | | | | | | Automation (now playing fallback) |
 | Screen Tools | ● thumbnail, rec | ● cmds | ● | ● | | ● picker | ○ audio | | | | ● copy | ● | | ● | Screen Recording, Microphone |
+| Colour Picker | ● picked colour, Colours page | ● cmds, `#` provider, auto-detect | | ● | | | | | | | ● copy | | | | — (the system loupe needs no permission) |
 | Clipboard | ○ flash | ● provider, mode | ● | ● | | ● picker | | | | | ● | | ● paste | ● SQLite | Accessibility, pasteboard access |
 | Shelf | ● drop zone, page | ● actions | ○ | ● | | | | | | | | | | ● | — |
 | Keyboard | ○ errors | ○ commands to bind | | ● | ● Hyper, bindings, leaders | ● cheat sheet, leader | | | | | | | | | Accessibility |

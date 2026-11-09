@@ -46,7 +46,7 @@ final class ClipboardProvider: SearchProvider {
         case .files:
             icon = item.fileURLs.first.map { .file($0) } ?? .symbol(item.kind.symbol)
         case .color:
-            icon = .glyph("●")
+            icon = item.color.map { ResultIcon.swatch(red: $0.red, green: $0.green, blue: $0.blue, alpha: $0.alpha) } ?? .glyph("●")
         default:
             icon = .symbol(item.isPinned ? "pin.fill" : item.kind.symbol)
         }

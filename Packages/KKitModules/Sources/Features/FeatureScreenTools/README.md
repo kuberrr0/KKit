@@ -1,7 +1,7 @@
 # Screen Tools
 
-Screenshots, text and QR scanning, translation, a colour picker and screen recording
-(DESIGN.md §3.6).
+Screenshots, text and QR scanning, translation and screen recording (DESIGN.md §3.6).
+The colour picker is its own feature, `FeatureColorPicker`.
 
 - **Picking**: every capture starts with `OverlayService.pickRegion` (drag an area; Space
   switches to clicking a window; Return or a click picks a screen in screen mode; ⎋ cancels).
@@ -19,8 +19,6 @@ Screenshots, text and QR scanning, translation, a colour picker and screen recor
 - **Translate** (`screenTools.translateArea`, `translateClipboard`, `tr hola` in the
   Floating Bar): a floating card that uses Apple's on-device Translation framework
   (macOS 15+; languages download on first use).
-- **Colour picker** (`screenTools.pickColor`): `NSColorSampler`; copies HEX, RGB, HSL, CSS,
-  SwiftUI or NSColor (`ColorFormatter`) and keeps the last 24 colours.
 - **Recording** (`screenTools.recordArea/Window/Screen`, `stopRecording`, Record tile):
   macOS 15+ (`SCRecordingOutput`), MP4 into the save folder, optional system audio,
   microphone (asks for Microphone) and click highlights. A red dot and the elapsed time

@@ -328,7 +328,10 @@ See §2.2. It's a *host* like the Floating Bar: features push **activities** int
     small floating card with Copy. Also works on clipboard text and Floating Bar input
     (`tr hola`).
   - **Colour picker:** system loupe; copies in your chosen format (HEX, RGB, HSL, SwiftUI,
-    CSS); keeps a colour history.
+    CSS); keeps a colour history. Built as its own feature, *Colour Picker*
+    (`FeatureColorPicker`): ⌃⌥P picks, the picked colour shows in the Island, a Colours
+    page in the expanded Island shows it in every format, and the Floating Bar converts
+    typed colours (`#FF8800`, `rgb(…)`, `hsl(…)`) and lists recent ones under `#`.
   - **Screen recording:** area/window/screen, system audio + mic, optional click and
     keystroke overlay; export MP4 (GIF later).
 - **Surfaces:** after capture, a **thumbnail lands in the Island** with actions (Copy,

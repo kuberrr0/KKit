@@ -309,6 +309,8 @@ struct ResultIconView: View {
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
                 .minimumScaleFactor(0.5)
+        case .swatch(let red, let green, let blue, let alpha):
+            KKSwatch(Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha), size: 18)
         }
     }
 }

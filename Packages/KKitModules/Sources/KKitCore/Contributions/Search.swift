@@ -30,6 +30,8 @@ public enum ResultIcon: Sendable, Hashable, Codable {
     case file(URL)
     /// A short piece of text drawn as the icon ("=", "€").
     case glyph(String)
+    /// A colour swatch, sRGB, 0…1 per channel (Colour Picker, Clipboard colours).
+    case swatch(red: Double, green: Double, blue: Double, alpha: Double)
 }
 
 /// What a result is. The Floating Bar runs results by kind (opens files and URLs, runs

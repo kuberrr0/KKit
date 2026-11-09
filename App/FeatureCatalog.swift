@@ -1,6 +1,7 @@
 import FeatureBrightness
 import FeatureCalculator
 import FeatureCleanMode
+import FeatureColorPicker
 import FeatureClipboard
 import FeatureKeyboard
 import FeatureNightShift
@@ -35,6 +36,7 @@ enum FeatureCatalog {
         QuickNoteFeature.self,
         ClipboardFeature.self,
         ScreenToolsFeature.self,
+        ColorPickerFeature.self,
         ShelfFeature.self,
         KeyboardFeature.self,
         WindowsFeature.self,

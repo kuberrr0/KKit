@@ -1,0 +1,12 @@
+// Signing defaults. Without a team, builds are signed "to run locally" (ad-hoc).
+//
+// macOS ties privacy permissions (Accessibility, Input Monitoring, Screen Recording)
+// to the code signature, and an ad-hoc signature changes on every build, so those
+// grants reset after each rebuild. To keep them, sign with your Apple Development
+// certificate: copy Local.xcconfig.example to Local.xcconfig (git-ignored) and set
+// your team ID there.
+
+KKIT_CODE_SIGN_IDENTITY = -
+KKIT_DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"

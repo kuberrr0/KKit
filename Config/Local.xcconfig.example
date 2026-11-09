@@ -1,0 +1,7 @@
+// Copy to Config/Local.xcconfig (git-ignored), fill in your team ID, then run
+// `xcodegen generate` again. A free Apple Developer account works: use your
+// "Personal Team" ID (10 characters). Find it in Xcode › Settings › Accounts, or in
+// the "OU" field of the "Apple Development" certificate in Keychain Access.
+
+KKIT_DEVELOPMENT_TEAM = ABCDE12345
+KKIT_CODE_SIGN_IDENTITY = Apple Development

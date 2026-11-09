@@ -32,5 +32,12 @@ Follow `docs/ARCHITECTURE.md` §11: create the target, implement `Feature`, regi
 
 ## Building
 
-This repo can't be built on Linux. CI (GitHub Actions, macOS runner) runs
-`xcodegen generate` and `xcodebuild build test`; check CI results to verify changes.
+This repo can't be built on Linux. CI (`.github/workflows/ci.yml`, macOS runner) runs
+`swift test --package-path Packages/KKitModules` (all module tests) and then
+`xcodegen generate` + `xcodebuild build` for the app; check CI results to verify changes.
+
+- Tests use Swift Testing. Fakes for every service and a ready-made `TestEnvironment`
+  live in `KKitServicesTesting`.
+- Signing: `Config/Signing.xcconfig` signs ad-hoc by default; a git-ignored
+  `Config/Local.xcconfig` sets the developer's team. Never commit a team ID.
+- Bundle ID is `com.kv.kkit`, log subsystem `com.kv.kkit`.

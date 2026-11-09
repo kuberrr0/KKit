@@ -48,7 +48,7 @@ struct ShortcutsSettingsView: View {
     }
 
     private func title(for owner: FeatureID) -> String {
-        owner == .app ? "KKit" : dependencies.features.manifest(for: owner)?.name ?? owner.rawValue
+        dependencies.ownerName(owner)
     }
 
     private func matches(_ command: Command) -> Bool {

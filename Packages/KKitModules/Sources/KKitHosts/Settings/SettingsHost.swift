@@ -11,6 +11,7 @@ public enum SettingsPage: Hashable, Sendable {
     case permissions
     case shortcuts
     case island
+    case floatingBar
     case feature(FeatureID)
 }
 
@@ -25,11 +26,13 @@ final class SettingsNavigation {
 @MainActor
 public final class SettingsHost: NSObject {
     private let dependencies: HostDependencies
+    private let floatingBar: FloatingBarHost?
     private let navigation = SettingsNavigation()
     private var window: NSWindow?
 
-    public init(dependencies: HostDependencies) {
+    public init(dependencies: HostDependencies, floatingBar: FloatingBarHost? = nil) {
         self.dependencies = dependencies
+        self.floatingBar = floatingBar
         super.init()
     }
 
@@ -53,6 +56,7 @@ public final class SettingsHost: NSObject {
     private func makeWindow() -> NSWindow {
         let controller = NSHostingController(rootView: SettingsRootView(
             dependencies: dependencies,
+            floatingBar: floatingBar,
             navigation: navigation
         ))
         let window = NSWindow(contentViewController: controller)
@@ -70,6 +74,7 @@ public final class SettingsHost: NSObject {
 
 struct SettingsRootView: View {
     let dependencies: HostDependencies
+    let floatingBar: FloatingBarHost?
     @Bindable var navigation: SettingsNavigation
 
     var body: some View {
@@ -105,6 +110,10 @@ struct SettingsRootView: View {
                     .tag(SettingsPage.shortcuts)
                 Label(String(localized: "Island"), systemImage: "capsule")
                     .tag(SettingsPage.island)
+                if floatingBar != nil {
+                    Label(String(localized: "Floating Bar"), systemImage: "magnifyingglass")
+                        .tag(SettingsPage.floatingBar)
+                }
             }
 
             Section(String(localized: "Features")) {
@@ -134,6 +143,11 @@ struct SettingsRootView: View {
         case .island:
             IslandSettingsView()
                 .environment(\.featureSettings, FeatureSettings(featureID: IslandSettings.owner, store: dependencies.settings))
+        case .floatingBar:
+            if let floatingBar {
+                FloatingBarSettingsView(dependencies: dependencies, host: floatingBar)
+                    .environment(\.featureSettings, floatingBar.floatingBarSettings)
+            }
         case .feature(let id):
             if let manifest = dependencies.features.manifest(for: id) {
                 FeatureSettingsView(dependencies: dependencies, manifest: manifest)

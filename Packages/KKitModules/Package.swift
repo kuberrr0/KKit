@@ -21,6 +21,9 @@ let package = Package(
         .library(name: "FeaturePrivacyIndicator", targets: ["FeaturePrivacyIndicator"]),
         .library(name: "FeatureTimer", targets: ["FeatureTimer"]),
         .library(name: "FeatureToggles", targets: ["FeatureToggles"]),
+        .library(name: "FeatureSearch", targets: ["FeatureSearch"]),
+        .library(name: "FeatureCalculator", targets: ["FeatureCalculator"]),
+        .library(name: "FeatureQuickNote", targets: ["FeatureQuickNote"]),
     ],
     dependencies: [
         // 2.x: 3.x needs swift-tools 6.2 (Xcode 26).
@@ -39,7 +42,7 @@ let package = Package(
         ),
         .target(name: "KKitServicesTesting", dependencies: ["KKitCore", "KKitServicesAPI"]),
 
-        // ── Hosts: the shared surfaces (menu bar, Settings, later Island, Floating Bar)
+        // ── Hosts: the shared surfaces (menu bar, Settings, Island, Floating Bar)
         .target(name: "KKitHosts", dependencies: ["KKitCore", "KKitUI", "KKitServicesAPI"]),
 
         // ── Features (depend on KKitCore, KKitUI, KKitServicesAPI only) ───────
@@ -50,6 +53,9 @@ let package = Package(
         .feature("FeaturePrivacyIndicator"),
         .feature("FeatureTimer"),
         .feature("FeatureToggles"),
+        .feature("FeatureSearch"),
+        .feature("FeatureCalculator"),
+        .feature("FeatureQuickNote"),
 
         // ── Tests ─────────────────────────────────────────────────────────────
         .testTarget(name: "KKitCoreTests", dependencies: ["KKitCore", "KKitServicesTesting"]),
@@ -69,6 +75,9 @@ let package = Package(
         .featureTests("FeaturePrivacyIndicator"),
         .featureTests("FeatureTimer"),
         .featureTests("FeatureToggles"),
+        .featureTests("FeatureSearch"),
+        .featureTests("FeatureCalculator"),
+        .featureTests("FeatureQuickNote"),
     ]
 )
 

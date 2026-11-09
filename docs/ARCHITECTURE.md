@@ -123,8 +123,8 @@ KKit/
 │   │       ├── FeatureShelf/
 │   │       ├── FeatureKeyboard/
 │   │       ├── FeatureQuickNote/
-│   │       ├── FeatureFinder/           # files / web / settings / menu-item providers
-│   │       │                            # for the Floating Bar
+│   │       ├── FeatureSearch/           # apps / files / web / System Settings
+│   │       │                            # providers for the Floating Bar
 │   │       ├── FeatureToggles/          # dark mode, hidden files, Wi-Fi, …
 │   │       ├── FeatureWindows/          # snapping, modifier+mouse move/resize, layouts
 │   │       ├── FeatureMenuBarManager/
@@ -315,6 +315,14 @@ public struct Command: Identifiable, Sendable {
 }
 ```
 
+> **As built (M2):** `kkit://run/<commandID>?value=…` and `kkit://search?q=…` are
+> parsed by `KKitLink` (KKitCore) and run by `ExternalCommandRunner` (KKitHosts), which
+> waits for features to start, honours *Settings › General › Let kkit:// links run
+> commands*, and parses `value` with `CommandArgumentParser` against the command's
+> parameter, exactly like typed text. The App Intent (`App/RunCommandIntent.swift`) is
+> `RunKKitCommandIntent` with a `KKitCommandEntity` parameter (an `EntityStringQuery`
+> over every registered command) and an optional text value; it uses the same runner.
+
 `QuickToggle` is a thin wrapper around a command with a state (`.on`/`.off`/`.value`), so a
 toggle tile in the menu bar, a Floating Bar result, and a hotkey all stay in
 sync.
@@ -386,6 +394,19 @@ provider score × frecency stored in SQLite), keyboard navigation, the empty-sta
 `kind`), and *modes*: a feature can take over the panel's content area (Quick Note's
 editor, Clipboard's grid) via `FloatingBarMode`.
 
+> **As built (M2):** `SearchProvider` is a `@MainActor` class protocol (providers hold
+> settings and indexes) with `prefix` and `includeInRootSearch`; results carry a
+> `ResultKind` (`.command`, `.application`, `.file`, `.url`, `.text`, `.custom`) that the
+> host runs by default, with an optional `perform` and `preview`. `ResultAction`s carry
+> `appliesTo`, `FloatingBarMode` a view builder taking a `FloatingBarModeContext`
+> (initial text, dismiss, exit, open settings). `FloatingBarHost` (the service behind
+> `context.floatingBar`) owns the panel and keys; `FloatingBarModel` owns the engine
+> (`QueryRouter`, `ResultRanker`, `FloatingBarHistory` with frecency, saved as JSON
+> through `StorageService`). Commands are searched by the host's own
+> `CommandSearchProvider`, which also matches inline arguments (`night 150`). Settings ›
+> Floating Bar turns providers on and off, sets the hotkey (⌥Space), placement and
+> history.
+
 ### 6.3 Menu bar host
 
 One KKit status item with the popover (toggle grid, sliders, stats strip). Features add
@@ -425,6 +446,8 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 | **FileAccessService** | Remember user-picked folders (e.g. Obsidian vault) with bookmarks, watch for changes | Bookmarks, FSEvents / `DispatchSource` | — |
 | **NotificationService** | Route to Island first, fall back to system notifications | UserNotifications | Notifications |
 | **LocationService** | Approximate location / city for sunset times (or manual city) | CoreLocation | Location (optional) |
+| **FileSearchService** (M2) | File and folder name search in the home folder, most recently used first | `NSMetadataQuery` (Spotlight) | — |
+| **FloatingBarService** (M2) | Open the Floating Bar with a query or in a feature's mode; implemented by `FloatingBarHost` | — | — |
 
 ### InputTapService in detail
 
@@ -562,13 +585,14 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 | Shelf | ● drop zone, page | ● actions | ○ | ● | | | | | | | | | | ● | — |
 | Keyboard | ○ cheat sheet | ● assign hotkey | | ● | ● Hyper, leaders | ● cheat sheet | | | | | | | | ● | Accessibility, Input Monitoring |
 | Night Shift | | ● cmds | ● tile, slider | ● | | | | ● gamma, dim, wake | | | | | | | Location (optional) |
-| Quick Note | ○ "saved" | ● mode, provider | | ● | | | | | | | ○ | | ○ selection | ● bookmark | — (folder picked by user) |
+| Quick Note | ○ "saved" | ● `n ` mode, ⌘K action | | ● | | | | | | | ○ | | ○ selection | ● bookmark | — (folder picked by user) |
 | Window Management | | ● cmds | | ● | ● modifier + mouse, drag snap | ● snap preview | | | | | | | ● WindowService | ● layouts | Accessibility |
 | Menu Bar Manager | | ● `m ` provider | ● separators | ● | | ● drop-down bar | | | | | | ○ icon images | ● MenuBarItems | ● | Accessibility, Screen Recording |
 | Quick Toggles | | ● cmds | ● tiles | ● | | ○ hide desktop | | | | | | | | | Automation (per toggle) |
 | Privacy Indicator | ● ear, page | ● cmd | | | | | ● DeviceUsage, mute | | | | | | | ○ log | — |
 | Timer | ● countdowns, alert, page | ● cmds | ● tile | ● | | | | | | | | | | ● saved timers | Notifications (optional) |
-| Calculator | | ● `=` provider | | | | | | | | | ● copy | | | ● rate cache | — |
+| Calculator | | ● `=` provider, auto-detect | | | | | | | | | ● copy | | | ● rate cache | — (network: exchange rates) |
+| Search | | ● apps, `f `, `/`, `w ` providers | | | | | | | | | | | | | — (Full Disk Access for Safari bookmarks) |
 | Clean Mode | | ● cmd | ● tile | ● | ● swallow all | ● lock overlay | | | | | | | | | Accessibility, Input Monitoring |
 
 This table is also the build order hint: **Overlay, Hotkeys, Permissions, Settings and the

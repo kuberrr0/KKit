@@ -1,6 +1,9 @@
+import FeatureCalculator
 import FeatureNightShift
 import FeaturePower
 import FeaturePrivacyIndicator
+import FeatureQuickNote
+import FeatureSearch
 import FeatureStats
 import FeatureTimer
 import FeatureToggles
@@ -19,5 +22,8 @@ enum FeatureCatalog {
         TogglesFeature.self,
         PrivacyIndicatorFeature.self,
         TimerFeature.self,
+        SearchFeature.self,
+        CalculatorFeature.self,
+        QuickNoteFeature.self,
     ]
 }

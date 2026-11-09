@@ -25,6 +25,16 @@ public struct HostDependencies {
         self.hotkeys = hotkeys
     }
 
+    /// The name to show for a command owner: a feature's name, or a host's.
+    public func ownerName(_ id: FeatureID) -> String {
+        switch id {
+        case .app: "KKit"
+        case FloatingBarSettings.owner: String(localized: "Floating Bar")
+        case IslandSettings.owner: String(localized: "Island")
+        default: features.manifest(for: id)?.name ?? id.rawValue
+        }
+    }
+
     /// Runs a command, logging failures.
     public func run(_ id: CommandID, source: CommandSource) {
         let commands = self.commands
@@ -42,6 +52,8 @@ public struct HostDependencies {
 public enum AppSettingKeys {
     /// Bool. Show a Dock icon (KKit is a menu bar app by default).
     public static let showDockIcon = "app.showDockIcon"
+    /// Bool. Let `kkit://run/…` links run commands.
+    public static let allowLinkCommands = "app.allowLinkCommands"
 }
 
 /// KKit's own command ids.

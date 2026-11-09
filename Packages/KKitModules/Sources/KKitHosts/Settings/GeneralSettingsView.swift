@@ -47,6 +47,13 @@ struct GeneralSettingsView: View {
                 Toggle(String(localized: "Show KKit in the Dock"), isOn: showDockIcon)
             }
 
+            KKSection(
+                String(localized: "Links and Shortcuts"),
+                footer: String(localized: "Links like kkit://run/nightShift.toggle run KKit commands from other apps and scripts. Every command is also in Shortcuts.app as “Run KKit Command”. Copy a command's link with ⌘K in the Floating Bar.")
+            ) {
+                Toggle(String(localized: "Let kkit:// links run commands"), isOn: allowLinkCommands)
+            }
+
             KKSection(String(localized: "About")) {
                 LabeledContent(String(localized: "Version"), value: Self.version)
                 LabeledContent(String(localized: "Features"), value: "\(dependencies.features.runningFeatures.count) of \(dependencies.features.manifests.count) on")
@@ -62,6 +69,14 @@ struct GeneralSettingsView: View {
                 settings.set(newValue, for: AppSettingKeys.showDockIcon)
                 DockIconPolicy.apply(showDockIcon: newValue)
             }
+        )
+    }
+
+    private var allowLinkCommands: Binding<Bool> {
+        let settings = dependencies.settings
+        return Binding(
+            get: { settings.value(for: AppSettingKeys.allowLinkCommands, default: true) },
+            set: { settings.set($0, for: AppSettingKeys.allowLinkCommands) }
         )
     }
 

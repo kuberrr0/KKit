@@ -50,7 +50,32 @@ Done. Notes on what was built versus the plan below:
 - **Timer, Pomodoro & Stopwatch**
 - **Quick Toggles**
 
-## M2 — Floating Bar
+## M2 — Floating Bar ✅
+
+Done. Notes on what was built versus the plan below:
+
+- `Feature` gained `searchProviders`, `resultActions` and `floatingBarModes`. New in
+  `KKitCore`: `SearchProvider`, `SearchResult`, `ResultKind`, `FloatingBarMode`,
+  `FuzzyMatch`, `CommandArgumentParser` and `KKitLink`. New services:
+  `FloatingBarService` (the host, `context.floatingBar`) and `FileSearchService`
+  (Spotlight); Quick Note publishes `QuickNoteServicing`.
+- The host (`KKitHosts/FloatingBar/`) keeps its engine in a testable
+  `FloatingBarModel`: prefix routing, a 50 ms first-paint deadline, ranking by provider
+  score + frecency, Favourites and Recent (`floatingBar/history.json`, not SQLite yet),
+  ⌘K actions, Tab preview, modes and inline arguments. Typing a parameterised command
+  without its value turns it into a chip that takes the value. Commands are a host
+  provider (`>`); files, apps, System Settings and the web are the **Search** feature
+  (`FeatureSearch`, the "FeatureFinder" of the plan).
+- Web: URLs, keyword engines (`yt lofi`), Chromium-family and Safari bookmarks and a
+  "Search Google for …" fallback. Open browser tabs (Automation per browser) are left
+  for later.
+- Calculator uses KKit's own unit table (Foundation `Measurement` doesn't parse unit
+  names); ⌘↵ to paste the answer waits for the paste service in M3, ↵ copies.
+- Quick Note's context is the frontmost app's name; the browser URL and selected text
+  need Automation/Accessibility and come later.
+- `kkit://run/<command>?value=…` and `kkit://search?q=…` go through
+  `ExternalCommandRunner`, as does the *Run KKit Command* App Intent (with an optional
+  value). Links can be stopped from running commands in Settings › General.
 
 - **Floating Bar host** (launcher panel, providers, ranking, favourites/recents, ⌘K actions, modes, inline command arguments)
 - Providers: commands, apps, files, System Settings, web

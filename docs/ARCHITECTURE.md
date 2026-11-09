@@ -217,6 +217,10 @@ public extension Feature {
 }
 ```
 
+> **As built (M0):** the protocol currently has `commands`, `quickToggles` and
+> `settingsPane`. The other contributions are added together with the host that shows
+> them (Island pages in M1, search providers and result actions in M2).
+
 *Static* contributions (commands, toggles, providers, panes) are declared as properties.
 *Dynamic* things (an activity that appears when recording starts) go through services on
 the context, e.g. `context.island.present(…)`.
@@ -238,6 +242,15 @@ public struct FeatureContext {
     public let hotkeys: HotkeyService
 }
 ```
+
+> **As built (M0):** `FeatureContext` in `KKitCore` holds `id`, `settings`, `log`,
+> `events` and `services`. KKitCore can't see the service protocols (they live in
+> `KKitServicesAPI`, which depends on KKitCore), so `KKitServicesAPI` adds
+> `context.permissions`, `context.hotkeys`, `context.overlays` and `context.storage` as
+> extensions resolved from the registry. `context.island` and `context.input` follow the
+> same pattern when those services land. Publish a service with
+> `context.services.publish((any ShelfServicing).self, controller)`; it is removed
+> automatically when the feature stops.
 
 Features **don't create windows or global hooks themselves**; they ask a service. That's
 what keeps multi-display handling, Spaces, full-screen behaviour and permissions
@@ -647,9 +660,11 @@ rules.
 - **Fakes** for every service protocol live in `KKitServicesTesting` so feature logic can
   be tested without real permissions or hardware.
 - **SwiftUI previews** for every component and pane, using fakes.
-- **CI** (GitHub Actions, `macos-latest`): `xcodegen generate`, `xcodebuild -scheme KKit
-  build test`, SwiftLint/SwiftFormat check. Release workflow later: archive, sign, notarize,
-  publish Sparkle appcast.
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`, macOS 15, latest stable Xcode):
+  `swift test --package-path Packages/KKitModules` for every module's tests, then
+  `xcodegen generate` and `xcodebuild build` for the app (unsigned). SwiftLint/SwiftFormat
+  checks to come. Release workflow later: archive, sign, notarize, publish Sparkle
+  appcast (needs a paid Developer ID).
 
 ---
 

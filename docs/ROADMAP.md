@@ -5,7 +5,13 @@ the features needing the fewest permissions ship first. See
 [ARCHITECTURE.md §10](ARCHITECTURE.md#10-how-each-feature-uses-the-shared-parts) for the
 dependency table behind this order.
 
-## M0 — Skeleton (no user-visible features yet)
+## M0 — Skeleton (no user-visible features yet) ✅
+
+Done. Notes on what was built versus the plan below: the `Feature` protocol has the
+contributions M0 hosts can show (commands, quick toggles, settings pane); search
+providers, result actions, Island pages and extra menu bar items are added with their
+hosts. Storage is JSON files per feature for now; GRDB/SQLite comes with Clipboard (M3).
+KKit's own commands (`app.openSettings`, `app.openMenu`) show in Settings › Shortcuts.
 
 - XcodeGen `project.yml`, app target, `Packages/KKitModules` with empty module targets
 - `KKitCore`: `Feature`, `FeatureManifest`, `FeatureContext`, `FeatureManager`,

@@ -74,7 +74,7 @@ public final class FakeScreenCaptureService: ScreenCaptureService {
     }
 
     /// A solid grey image.
-    public static func sampleImage(width: Int, height: Int) -> CGImage {
+    nonisolated public static func sampleImage(width: Int, height: Int) -> CGImage {
         let space = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
         let context = CGContext(
             data: nil,

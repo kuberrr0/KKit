@@ -56,7 +56,7 @@ public final class MacSystemActionsService: SystemActionsService {
     public func setShowsHiddenFiles(_ on: Bool) async throws {
         try await ProcessRunner.run("/usr/bin/defaults", ["write", "com.apple.finder", "AppleShowAllFiles", "-bool", on ? "true" : "false"])
         // Finder only reads the setting at launch.
-        try? await ProcessRunner.run("/usr/bin/killall", ["Finder"])
+        _ = try? await ProcessRunner.run("/usr/bin/killall", ["Finder"])
     }
 
     public func emptyTrash() async throws {

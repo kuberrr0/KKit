@@ -144,7 +144,7 @@ public final class IslandHost: IslandService {
 
     private func rebuildPanels() {
         let screens = targetScreens()
-        let wanted = Set(screens.map(\.displayID))
+        let wanted = Set(screens.map(\.islandDisplayID))
         for (id, panel) in panels where !wanted.contains(id) {
             panel.close()
             panels[id] = nil

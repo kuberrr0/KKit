@@ -154,11 +154,15 @@ Done. Notes on what was built versus the plan below:
 
 Done. Notes on what was built versus the plan below:
 
-- `MenuBarItemsService` (`StatusBarMenuBarItemsService`) owns three status items, right
-  to left: the ‹ chevron, the Hidden divider and the optional Always Hidden divider. A
-  hidden section's divider grows to 10 000 pt and pushes the icons left of it off the
-  screen; sections are read from where icons sit relative to the dividers' midpoints,
-  so ⌘-dragging icons is how they move. Hiding needs no permission and fails open
+- `MenuBarItemsService` (`StatusBarMenuBarItemsService`) owns two status items, right
+  to left: the ‹ chevron, which is also the Hidden divider, and the optional Always
+  Hidden divider. A hidden section's item grows to 10 000 pt and pushes the icons left
+  of it off the screen (the chevron keeps its arrow pinned to its right end, so "left
+  of the chevron" is exactly what hides; an earlier build had a separate Hidden divider
+  and icons dropped between it and the chevron stayed visible). Sections are read from
+  the items' right edges, so ⌘-dragging icons is how they move. A collapsed item is
+  too long to drag past, so holding ⌘ over the menu bar (or ⌘-clicking it) shows
+  every section first. Hiding needs no permission and fails open
   (turn the feature off or quit KKit and every icon is back).
 - Icons are read per app through Accessibility (`AXExtrasMenuBar`, 0.15 s per app,
   never KKit's own process) and matched to their status windows by frame for pictures

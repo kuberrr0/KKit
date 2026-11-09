@@ -1,50 +1,48 @@
 import CoreGraphics
 import KKitServicesAPI
 
-/// Where KKit's chevron and dividers are, and what that says about other icons. Pure
-/// geometry, so it can be tested. Frames are in AppKit global coordinates.
+/// Where KKit's chevron and Always Hidden divider are, and what that says about other
+/// icons. Pure geometry, so it can be tested. Frames are in AppKit global coordinates.
 ///
-/// Right to left the menu bar reads: always-shown icons, the ‹ chevron, the Hidden
-/// divider, hidden icons, the Always Hidden divider, always-hidden icons. A collapsed
-/// divider is ~10 000 pt long and pushes everything left of it off the screen, so
-/// icons are compared with the dividers' midpoints: that works whether a divider is
-/// collapsed or showing.
+/// Right to left the menu bar reads: shown icons, the ‹ chevron, hidden icons, the
+/// Always Hidden divider, always-hidden icons. The chevron is also the Hidden divider:
+/// while hidden icons are hidden it is ~10 000 pt long with its arrow at the right end,
+/// pushing everything left of it off the screen (the Always Hidden divider does the
+/// same for its section). So icons are compared with the items' right edges, which
+/// stay put whether an item is collapsed or showing.
 struct MenuBarLayout: Sendable, Equatable {
     var chevron: CGRect?
-    var hiddenDivider: CGRect?
     var alwaysHiddenDivider: CGRect?
 
     func section(of frame: CGRect) -> MenuBarIconSection {
-        guard let hiddenDivider else { return .shown }
-        if frame.midX >= hiddenDivider.midX {
+        guard let chevron else { return .shown }
+        if frame.midX >= chevron.maxX {
             return .shown
         }
-        if let alwaysHiddenDivider, frame.midX < alwaysHiddenDivider.midX {
+        if let alwaysHiddenDivider, frame.midX < alwaysHiddenDivider.maxX {
             return .alwaysHidden
         }
         return .hidden
     }
 
-    /// The chevron, Hidden divider and Always Hidden divider aren't right to left.
+    /// The Always Hidden divider is right of the chevron.
     var isOutOfOrder: Bool {
-        guard let chevron, let hiddenDivider else { return false }
-        if chevron.midX < hiddenDivider.midX { return true }
-        if let alwaysHiddenDivider, alwaysHiddenDivider.midX > hiddenDivider.midX { return true }
-        return false
+        guard let chevron, let alwaysHiddenDivider else { return false }
+        return alwaysHiddenDivider.maxX > chevron.maxX
     }
 
-    /// Where to drop an icon so a ⌘-drag puts it in `section`. Needs every divider
+    /// Where to drop an icon so a ⌘-drag puts it in `section`. Needs both items
     /// showing (not collapsed). The point is in AppKit coordinates, at the icon's height.
+    ///
+    /// macOS puts a dragged icon on whichever side of a neighbour the pointer is past
+    /// the middle of, so each point sits just past an edge.
     func dropPoint(for section: MenuBarIconSection, y: CGFloat) -> CGPoint? {
-        guard let chevron, let hiddenDivider else { return nil }
+        guard let chevron else { return nil }
         switch section {
         case .shown:
-            // On the chevron: whichever side of it the icon lands, it's shown.
-            return CGPoint(x: chevron.midX, y: y)
+            return CGPoint(x: chevron.maxX + 3, y: y)
         case .hidden:
-            // Between the two dividers: past one of them, whichever side it came from.
-            let left = alwaysHiddenDivider?.maxX ?? (hiddenDivider.minX - 6)
-            return CGPoint(x: (left + hiddenDivider.minX) / 2, y: y)
+            return CGPoint(x: chevron.minX - 2, y: y)
         case .alwaysHidden:
             guard let alwaysHiddenDivider else { return nil }
             return CGPoint(x: alwaysHiddenDivider.minX - 3, y: y)

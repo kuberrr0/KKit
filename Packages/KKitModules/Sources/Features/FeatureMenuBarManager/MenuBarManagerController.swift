@@ -229,8 +229,17 @@ final class MenuBarManagerController: MenuBarIconsServicing {
 
     private func setCommandHandler(_ enabled: Bool) {
         if enabled, commandToken == nil, isRunning {
-            commandToken = input.add(priority: .low, interests: [.flagsChanged]) { [weak self] event in
-                self?.flagsChanged(event.modifiers)
+            // ⌘ pressed over the menu bar, or ⌘ held elsewhere and then a click on
+            // the menu bar (the start of a ⌘-drag).
+            commandToken = input.add(priority: .low, interests: [.flagsChanged, .leftMouseDown]) { [weak self] event in
+                guard let self else { return .pass }
+                if event.type == .leftMouseDown {
+                    if event.modifiers.contains(.command) {
+                        self.flagsChanged([.command])
+                    }
+                } else {
+                    self.flagsChanged(event.modifiers)
+                }
                 return .pass
             }
         } else if !enabled, let token = commandToken {

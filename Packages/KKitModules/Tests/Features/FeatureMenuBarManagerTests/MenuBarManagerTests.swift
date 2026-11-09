@@ -191,7 +191,7 @@ struct MenuBarManagerTests {
         settings[MenuBarManagerSettings.autoHideDelay] = 0
         controller.start()
         await env.settle()
-        #expect(env.input.handlers(owner: "menuBarManager").first?.interests == [.flagsChanged])
+        #expect(env.input.handlers(owner: "menuBarManager").first?.interests == [.flagsChanged, .leftMouseDown])
 
         // Not over the menu bar: nothing.
         env.input.sendFlags([.command], keyCode: Shortcut.Key.leftCommand)
@@ -208,6 +208,20 @@ struct MenuBarManagerTests {
 
         env.input.sendFlags([], keyCode: Shortcut.Key.leftCommand)
         try await Task.sleep(for: .milliseconds(450))
+        #expect(env.menuBarItems.revealed.isEmpty)
+
+        // ⌘ already held when the pointer got to the menu bar: the ⌘-click that
+        // starts a drag shows everything.
+        #expect(!env.input.sendMouse(.leftMouseDown, at: CGPoint(x: 500, y: 12), modifiers: [.command]))
+        await env.settle()
+        #expect(env.menuBarItems.revealed == [.hidden, .alwaysHidden])
+        env.input.sendFlags([], keyCode: Shortcut.Key.leftCommand)
+        try await Task.sleep(for: .milliseconds(450))
+        #expect(env.menuBarItems.revealed.isEmpty)
+
+        // A plain click doesn't.
+        env.input.sendMouse(.leftMouseDown, at: CGPoint(x: 500, y: 12))
+        await env.settle()
         #expect(env.menuBarItems.revealed.isEmpty)
 
         settings[MenuBarManagerSettings.showAllWithCommand] = false

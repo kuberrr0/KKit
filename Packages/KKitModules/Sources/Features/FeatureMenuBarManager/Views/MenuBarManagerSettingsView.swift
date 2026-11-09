@@ -20,7 +20,7 @@ struct MenuBarManagerSettingsView: View {
         Group {
             KKSection(
                 String(localized: "Showing hidden icons"),
-                footer: String(localized: "⌘-drag icons left of the ‹ chevron to hide them. ⌥-click the chevron to show every icon.")
+                footer: String(localized: "To hide icons, hold ⌘ over the menu bar (or click the chevron first), then drag them left of the chevron. ⌥-click the chevron to show every icon.")
             ) {
                 Picker(String(localized: "Show them by"), selection: $revealOn) {
                     ForEach(RevealTrigger.allCases, id: \.self) { trigger in

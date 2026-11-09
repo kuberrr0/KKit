@@ -5,9 +5,11 @@ good, and shows hidden and behind-the-notch icons in a drop-down bar. DESIGN.md 
 
 - **Does:**
   - Three sections, set by where icons sit relative to KKit's items. Right to left:
-    **Always Shown** icons, the **‹ chevron**, the Hidden divider, **Hidden** icons, the
-    Always Hidden divider (optional), **Always Hidden** icons. ⌘-drag icons across the
-    dividers to move them, as you would any menu bar icon.
+    **Always Shown** icons, the **‹ chevron** (which is the Hidden divider too),
+    **Hidden** icons, the Always Hidden divider (optional), **Always Hidden** icons.
+    ⌘-drag icons across the chevron or the divider to move them, as you would any menu
+    bar icon. Holding ⌘ over the menu bar (or ⌘-clicking it) shows every section
+    first, because a collapsed section is too long to drag an icon past.
   - Click the chevron (or point at it, a setting) to show hidden icons; ⌥-click or
     right-click shows always-hidden ones too. They hide again after 10 s (5–60 s or
     never), but not while a menu is open or the pointer is on the menu bar.

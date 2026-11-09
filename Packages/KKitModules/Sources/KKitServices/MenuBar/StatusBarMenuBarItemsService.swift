@@ -7,17 +7,20 @@ import KKitServicesAPI
 /// Hides other apps' menu bar icons behind KKit's divider status items, lists them
 /// through Accessibility and opens or moves them (ARCHITECTURE.md §7, DESIGN.md §3.13).
 ///
-/// The technique is the one Hidden Bar and Ice use: a divider status item grows to
-/// 10 000 pt, which pushes every icon left of it off the screen. KKit adds three
-/// items, created right to left: the ‹ chevron (always visible, clicked to show), the
-/// Hidden divider, and (optionally) the Always Hidden divider. macOS remembers where
-/// the user ⌘-drags them through their autosave names.
+/// The technique is the one Hidden Bar and Ice use: a status item grows to 10 000 pt,
+/// which pushes every icon left of it off the screen. KKit adds two items, created
+/// right to left: the ‹ chevron, which is also the Hidden divider (its arrow stays at
+/// the right end, so "left of the chevron" is exactly what gets hidden), and
+/// optionally the Always Hidden divider. macOS remembers where the user ⌘-drags them
+/// through their autosave names.
 @MainActor
 public final class StatusBarMenuBarItemsService: MenuBarItemsService {
     static let chevronName = "kkit.menuBarManager.chevron"
-    static let hiddenName = "kkit.menuBarManager.hidden"
     static let alwaysHiddenName = "kkit.menuBarManager.alwaysHidden"
-    static var autosaveNames: [String] { [chevronName, hiddenName, alwaysHiddenName] }
+    static var autosaveNames: [String] { [chevronName, alwaysHiddenName] }
+    /// The separate Hidden divider of the first M5 builds.
+    static let oldHiddenName = "kkit.menuBarManager.hidden"
+
 
     /// Icons are read again after this long.
     private let cacheLifetime: TimeInterval = 1
@@ -26,7 +29,6 @@ public final class StatusBarMenuBarItemsService: MenuBarItemsService {
     private let log = KKitLog.logger("menuBarItems")
 
     private var chevron: ChevronItem?
-    private var hiddenDivider: DividerItem?
     private var alwaysHiddenDivider: DividerItem?
     private var onChevron: (@MainActor (MenuBarChevronEvent) -> Void)?
     private var cache: (date: Date, icons: [MenuBarIcon])?
@@ -45,15 +47,13 @@ public final class StatusBarMenuBarItemsService: MenuBarItemsService {
         self.onChevron = onChevron
         // Newer status items go left of older ones, so create them right to left.
         if chevron == nil {
+            UserDefaults.standard.removeObject(forKey: Self.positionKey(Self.oldHiddenName))
             chevron = ChevronItem(autosaveName: Self.chevronName) { [weak self] event in
                 self?.onChevron?(event)
             }
         }
-        if hiddenDivider == nil {
-            hiddenDivider = DividerItem(autosaveName: Self.hiddenName, style: .hidden)
-        }
         if alwaysHiddenSection, alwaysHiddenDivider == nil {
-            alwaysHiddenDivider = DividerItem(autosaveName: Self.alwaysHiddenName, style: .alwaysHidden)
+            alwaysHiddenDivider = DividerItem(autosaveName: Self.alwaysHiddenName)
         } else if !alwaysHiddenSection, let divider = alwaysHiddenDivider {
             Self.keepingPositions { divider.remove() }
             alwaysHiddenDivider = nil
@@ -64,11 +64,9 @@ public final class StatusBarMenuBarItemsService: MenuBarItemsService {
     public func uninstall() {
         Self.keepingPositions {
             alwaysHiddenDivider?.remove()
-            hiddenDivider?.remove()
             chevron?.remove()
         }
         alwaysHiddenDivider = nil
-        hiddenDivider = nil
         chevron = nil
         onChevron = nil
         revealed = []
@@ -101,16 +99,15 @@ public final class StatusBarMenuBarItemsService: MenuBarItemsService {
         apply()
     }
 
-    public var chevronFrame: CGRect? { chevron?.frame }
+    public var chevronFrame: CGRect? { chevron?.arrowFrame }
 
     private func apply() {
-        hiddenDivider?.setRevealed(revealed.contains(.hidden))
         alwaysHiddenDivider?.setRevealed(revealed.contains(.alwaysHidden))
         chevron?.setOpen(revealed.contains(.hidden))
     }
 
     private var layout: MenuBarLayout {
-        MenuBarLayout(chevron: chevron?.frame, hiddenDivider: hiddenDivider?.frame, alwaysHiddenDivider: alwaysHiddenDivider?.frame)
+        MenuBarLayout(chevron: chevron?.frame, alwaysHiddenDivider: alwaysHiddenDivider?.frame)
     }
 
     // MARK: Icons
@@ -285,15 +282,22 @@ public final class StatusBarMenuBarItemsService: MenuBarItemsService {
 
 // MARK: - KKit's status items
 
-/// The ‹ chevron: always visible, right of the hidden icons.
+/// The ‹ chevron, which is also the Hidden divider. While hidden icons are hidden it is
+/// 10 000 pt long and pushes them off the screen; its arrow is pinned to the right end,
+/// and only clicks and hovers on the arrow count. While they show, it's just the › arrow.
 @MainActor
 final class ChevronItem: NSResponder {
+    static let collapsedLength: CGFloat = 10_000
+    /// The arrow's part of the item, at its right end.
+    static let arrowWidth: CGFloat = 22
+
     private let statusItem: NSStatusItem
     private let onEvent: @MainActor (MenuBarChevronEvent) -> Void
+    private let arrow = PassThroughImageView()
     private var trackingArea: NSTrackingArea?
 
     init(autosaveName: String, onEvent: @escaping @MainActor (MenuBarChevronEvent) -> Void) {
-        self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        self.statusItem = NSStatusBar.system.statusItem(withLength: Self.collapsedLength)
         self.onEvent = onEvent
         super.init()
         statusItem.autosaveName = autosaveName
@@ -301,9 +305,21 @@ final class ChevronItem: NSResponder {
             button.target = self
             button.action = #selector(clicked(_:))
             _ = button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            // Clicks on the empty stretch left of the arrow shouldn't light up 10 000 pt.
+            (button.cell as? NSButtonCell)?.highlightsBy = []
             button.toolTip = String(localized: "Show hidden menu bar icons (⌥-click: everything)")
+
+            // The arrow is its own view pinned to the right edge, so it stays in place
+            // whatever the item's length.
+            let bounds = button.bounds
+            arrow.frame = NSRect(x: bounds.width - Self.arrowWidth, y: 0, width: Self.arrowWidth, height: max(bounds.height, 22))
+            arrow.autoresizingMask = [.minXMargin, .height]
+            arrow.imageScaling = .scaleNone
+            arrow.imageAlignment = .alignCenter
+            button.addSubview(arrow)
+
             let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self, userInfo: nil)
-            button.addTrackingArea(area)
+            arrow.addTrackingArea(area)
             trackingArea = area
         }
         setOpen(false)
@@ -314,29 +330,45 @@ final class ChevronItem: NSResponder {
         fatalError("init(coder:) is not used")
     }
 
+    /// The whole item: 10 000 pt while collapsed.
     var frame: CGRect? { statusItem.button?.window?.frame }
 
+    /// Just the arrow, in screen coordinates.
+    var arrowFrame: CGRect? {
+        guard let frame else { return nil }
+        let width = min(Self.arrowWidth, frame.width)
+        return CGRect(x: frame.maxX - width, y: frame.minY, width: width, height: frame.height)
+    }
+
     func setOpen(_ open: Bool) {
-        guard let button = statusItem.button else { return }
+        statusItem.length = open ? Self.arrowWidth : Self.collapsedLength
         let name = open ? "chevron.compact.right" : "chevron.compact.left"
         let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
             .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold))
         image?.isTemplate = true
-        button.image = image
-        button.setAccessibilityLabel(open
+        arrow.image = image
+        if let button = statusItem.button {
+            let bounds = button.bounds
+            arrow.frame = NSRect(x: bounds.width - Self.arrowWidth, y: 0, width: Self.arrowWidth, height: bounds.height)
+        }
+        statusItem.button?.setAccessibilityLabel(open
             ? String(localized: "Hide menu bar icons")
             : String(localized: "Show hidden menu bar icons"))
     }
 
     func remove() {
         if let trackingArea {
-            statusItem.button?.removeTrackingArea(trackingArea)
+            arrow.removeTrackingArea(trackingArea)
         }
         NSStatusBar.system.removeStatusItem(statusItem)
     }
 
     @objc private func clicked(_ sender: Any?) {
         let event = NSApp.currentEvent
+        if let event, event.window === statusItem.button?.window {
+            let point = arrow.convert(event.locationInWindow, from: nil)
+            guard arrow.bounds.insetBy(dx: -4, dy: 0).contains(point) else { return }
+        }
         let alternate = event?.type == .rightMouseUp || event?.modifierFlags.contains(.option) == true
         onEvent(.click(alternate: alternate))
     }
@@ -346,31 +378,26 @@ final class ChevronItem: NSResponder {
     }
 }
 
-/// A divider: a faint line while its section shows, 10 000 pt of nothing while it's
-/// hidden.
+/// Shows the arrow but lets clicks through to the status item's button.
+final class PassThroughImageView: NSImageView {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+}
+
+/// The Always Hidden divider: a dotted line while its section shows, 10 000 pt of
+/// nothing while it's hidden.
 @MainActor
 final class DividerItem {
-    enum Style {
-        case hidden
-        case alwaysHidden
-    }
-
     static let collapsedLength: CGFloat = 10_000
     static let shownLength: CGFloat = 12
 
     private let statusItem: NSStatusItem
-    private let style: Style
 
-    init(autosaveName: String, style: Style) {
+    init(autosaveName: String) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: Self.collapsedLength)
-        self.style = style
         statusItem.autosaveName = autosaveName
-        statusItem.button?.setAccessibilityLabel(style == .hidden
-            ? String(localized: "KKit: hidden icons start here")
-            : String(localized: "KKit: always-hidden icons start here"))
-        statusItem.button?.toolTip = style == .hidden
-            ? String(localized: "⌘-drag icons left of this line to hide them")
-            : String(localized: "⌘-drag icons left of this line to keep them hidden")
+        statusItem.button?.setAccessibilityLabel(String(localized: "KKit: always-hidden icons start here"))
+        statusItem.button?.toolTip = String(localized: "⌘-drag icons left of this line to keep them hidden")
+        (statusItem.button?.cell as? NSButtonCell)?.highlightsBy = []
         setRevealed(false)
     }
 
@@ -378,7 +405,7 @@ final class DividerItem {
 
     func setRevealed(_ revealed: Bool) {
         statusItem.length = revealed ? Self.shownLength : Self.collapsedLength
-        statusItem.button?.image = revealed ? Self.image(style) : nil
+        statusItem.button?.image = revealed ? Self.image() : nil
     }
 
     func remove() {
@@ -386,16 +413,11 @@ final class DividerItem {
     }
 
     /// Drawn whenever AppKit likes, so nothing main-actor in the drawing handler.
-    nonisolated private static func image(_ style: Style) -> NSImage {
+    nonisolated private static func image() -> NSImage {
         let image = NSImage(size: NSSize(width: 6, height: 16), flipped: false) { rect in
             NSColor.black.setFill()
-            switch style {
-            case .hidden:
-                NSBezierPath(roundedRect: NSRect(x: rect.midX - 0.75, y: 2, width: 1.5, height: 12), xRadius: 0.75, yRadius: 0.75).fill()
-            case .alwaysHidden:
-                for index in 0..<4 {
-                    NSBezierPath(ovalIn: NSRect(x: rect.midX - 1, y: 2 + CGFloat(index) * 3.5, width: 2, height: 2)).fill()
-                }
+            for index in 0..<4 {
+                NSBezierPath(ovalIn: NSRect(x: rect.midX - 1, y: 2 + CGFloat(index) * 3.5, width: 2, height: 2)).fill()
             }
             return true
         }

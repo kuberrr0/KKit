@@ -6,19 +6,17 @@ import Testing
 
 struct MenuBarLayoutTests {
     // AppKit coordinates on a 1512 × 982 screen; the menu bar is y 958…982.
-    static let chevron = CGRect(x: 1100, y: 958, width: 20, height: 24)
-
-    /// Both sections hidden: each divider is 10 000 pt long.
+    /// Both sections hidden: the chevron and the Always Hidden divider are 10 000 pt
+    /// long, the chevron's arrow at its right end (maxX 1120).
     static let collapsed = MenuBarLayout(
-        chevron: chevron,
-        hiddenDivider: CGRect(x: 1090 - 10_000, y: 958, width: 10_000, height: 24),
-        alwaysHiddenDivider: CGRect(x: 1090 - 10_000 - 60 - 10_000, y: 958, width: 10_000, height: 24)
+        chevron: CGRect(x: 1120 - 10_000, y: 958, width: 10_000, height: 24),
+        alwaysHiddenDivider: CGRect(x: 1120 - 10_000 - 60 - 10_000, y: 958, width: 10_000, height: 24)
     )
 
-    /// Everything showing: the dividers are 12 pt lines.
+    /// Everything showing: a 20 pt chevron and a 12 pt divider.
+    static let chevron = CGRect(x: 1100, y: 958, width: 20, height: 24)
     static let expanded = MenuBarLayout(
         chevron: chevron,
-        hiddenDivider: CGRect(x: 1078, y: 958, width: 12, height: 24),
         alwaysHiddenDivider: CGRect(x: 1000, y: 958, width: 12, height: 24)
     )
 
@@ -29,18 +27,19 @@ struct MenuBarLayoutTests {
     @Test func sectionsWhileCollapsed() {
         let layout = Self.collapsed
         #expect(layout.section(of: Self.icon(at: 1200)) == .shown)
-        // Hidden icons sit just left of the long Hidden divider.
-        #expect(layout.section(of: Self.icon(at: 1090 - 10_000 - 30)) == .hidden)
+        #expect(layout.section(of: Self.icon(at: 1121)) == .shown)
+        // Hidden icons sit just left of the long chevron.
+        #expect(layout.section(of: Self.icon(at: 1120 - 10_000 - 30)) == .hidden)
         // Always-hidden ones are left of the Always Hidden divider too.
-        #expect(layout.section(of: Self.icon(at: 1090 - 30_000)) == .alwaysHidden)
+        #expect(layout.section(of: Self.icon(at: 1120 - 30_000)) == .alwaysHidden)
         #expect(!layout.isOutOfOrder)
     }
 
     @Test func sectionsWhileExpanded() {
         let layout = Self.expanded
         #expect(layout.section(of: Self.icon(at: 1130)) == .shown)
-        // Between the chevron and the Hidden divider still counts as shown.
-        #expect(layout.section(of: CGRect(x: 1091, y: 958, width: 8, height: 24)) == .shown)
+        // Anything left of the chevron is hidden, right up against it too.
+        #expect(layout.section(of: Self.icon(at: 1076)) == .hidden)
         #expect(layout.section(of: Self.icon(at: 1040)) == .hidden)
         #expect(layout.section(of: Self.icon(at: 950)) == .alwaysHidden)
     }
@@ -56,25 +55,23 @@ struct MenuBarLayoutTests {
         var layout = Self.expanded
         layout.alwaysHiddenDivider = CGRect(x: 1150, y: 958, width: 12, height: 24)
         #expect(layout.isOutOfOrder)
-        layout = Self.expanded
-        layout.chevron = CGRect(x: 900, y: 958, width: 20, height: 24)
-        #expect(layout.isOutOfOrder)
+        layout.alwaysHiddenDivider = nil
+        #expect(!layout.isOutOfOrder)
     }
 
     @Test func dropPoints() throws {
         let layout = Self.expanded
         let shown = try #require(layout.dropPoint(for: .shown, y: 970))
-        #expect(shown == CGPoint(x: Self.chevron.midX, y: 970))
+        #expect(shown.y == 970)
+        #expect(shown.x > Self.chevron.maxX)
         let hidden = try #require(layout.dropPoint(for: .hidden, y: 970))
-        // Halfway between the dividers.
-        let halfway: CGFloat = (1012 + 1078) / 2
-        #expect(hidden.x == halfway)
+        #expect(hidden.x < Self.chevron.minX)
+        #expect(hidden.x > Self.chevron.minX - 6)
         let alwaysHidden = try #require(layout.dropPoint(for: .alwaysHidden, y: 970))
         #expect(alwaysHidden.x < 1000)
         var noAlwaysHidden = layout
         noAlwaysHidden.alwaysHiddenDivider = nil
         #expect(noAlwaysHidden.dropPoint(for: .alwaysHidden, y: 970) == nil)
-        #expect(try #require(noAlwaysHidden.dropPoint(for: .hidden, y: 970)).x < 1078)
     }
 
     @Test func onScreenAndTheNotch() {

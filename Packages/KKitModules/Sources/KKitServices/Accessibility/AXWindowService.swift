@@ -27,9 +27,20 @@ public final class AXWindowService: WindowService {
 
     public func window(at point: CGPoint) async -> WindowInfo? {
         guard isTrusted else { return nil }
+        // Hit-testing a point over one of KKit's own windows would make KKit answer the
+        // Accessibility query itself, off the main thread, which crashes SwiftUI. Ask the
+        // window server who's there first. Click-through panels (tints, the snap
+        // preview) don't count as KKit's, but with one there the system-wide hit test is
+        // skipped and the window is found through its own app instead.
+        let flipped = AX.flip(point)
+        let clickThrough = Set((NSApp?.windows ?? []).filter(\.ignoresMouseEvents).map(\.windowNumber))
+        if Self.topWindowOwner(at: flipped, skipping: clickThrough) == ownPID {
+            return nil
+        }
+        let ownWindowThere = Self.topWindowOwner(at: flipped) == ownPID
         let candidates = Self.onScreenWindows()
-            .filter { $0.pid != ownPID && $0.bounds.contains(AX.flip(point)) }
-        guard let raw = await engine.window(at: AX.flip(point), ownPID: ownPID, fallbacks: candidates) else { return nil }
+            .filter { $0.pid != ownPID && $0.bounds.contains(flipped) }
+        guard let raw = await engine.window(at: flipped, hitTest: !ownWindowThere, ownPID: ownPID, fallbacks: candidates) else { return nil }
         return decorate(raw)
     }
 
@@ -82,6 +93,23 @@ public final class AXWindowService: WindowService {
             isFullScreen: raw.isFullScreen,
             isResizable: raw.isResizable
         )
+    }
+
+    /// The process owning the frontmost visible window (any level) at `point`, in Core
+    /// Graphics coordinates.
+    static func topWindowOwner(at point: CGPoint, skipping windowNumbers: Set<Int> = []) -> pid_t? {
+        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] else {
+            return nil
+        }
+        for entry in list {
+            guard let boundsDict = entry[kCGWindowBounds as String] as? NSDictionary,
+                  let bounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary),
+                  bounds.contains(point),
+                  ((entry[kCGWindowAlpha as String] as? Double) ?? 1) > 0,
+                  !windowNumbers.contains((entry[kCGWindowNumber as String] as? Int) ?? -1) else { continue }
+            return entry[kCGWindowOwnerPID as String] as? Int32
+        }
+        return nil
     }
 
     /// Layer-0 windows on screen, front to back, from the window server (no permission
@@ -138,11 +166,11 @@ actor AXWindowEngine {
         return window.flatMap { raw(for: $0, pid: pid, ownerName: nil) }
     }
 
-    func window(at point: CGPoint, ownPID: pid_t, fallbacks: [ListedWindow]) -> RawWindow? {
+    func window(at point: CGPoint, hitTest: Bool, ownPID: pid_t, fallbacks: [ListedWindow]) -> RawWindow? {
         let systemWide = AXUIElementCreateSystemWide()
         AXUIElementSetMessagingTimeout(systemWide, AX.messagingTimeout)
         var hit: AXUIElement?
-        if AXUIElementCopyElementAtPosition(systemWide, Float(point.x), Float(point.y), &hit) == .success,
+        if hitTest, AXUIElementCopyElementAtPosition(systemWide, Float(point.x), Float(point.y), &hit) == .success,
            let hit, let pid = AX.pid(hit), pid != ownPID,
            let window = Self.enclosingWindow(of: hit) {
             return raw(for: window, pid: pid, ownerName: nil)

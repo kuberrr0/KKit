@@ -22,7 +22,9 @@ public final class AXAccessibilityService: AccessibilityService {
     }
 
     public func menuItems(of pid: Int32) async -> [MenuItemInfo] {
-        guard isTrusted else { return [] }
+        // KKit would answer its own Accessibility queries on the engine's thread, and
+        // SwiftUI must only be touched on the main thread.
+        guard isTrusted, pid != ownPID else { return [] }
         if let cached = cache[pid], Date().timeIntervalSince(cached.date) < cacheLifetime {
             return cached.items
         }
@@ -36,6 +38,7 @@ public final class AXAccessibilityService: AccessibilityService {
 
     public func press(_ item: MenuItemInfo) async throws {
         guard isTrusted else { throw AccessibilityError.needsAccessibility }
+        guard item.pid != ownPID else { throw AccessibilityError.itemGone }
         cache[item.pid] = nil
         guard await engine.press(path: item.path, pid: item.pid) else {
             throw AccessibilityError.itemGone
@@ -43,7 +46,10 @@ public final class AXAccessibilityService: AccessibilityService {
     }
 
     public func selectedText() async -> String? {
-        guard isTrusted else { return nil }
+        // The focused element is asked through its app; never let that be KKit (a KKit
+        // panel can have key focus without KKit being the active app).
+        guard isTrusted, NSWorkspace.shared.frontmostApplication?.processIdentifier != ownPID,
+              NSApp?.keyWindow == nil else { return nil }
         return await engine.selectedText()
     }
 }

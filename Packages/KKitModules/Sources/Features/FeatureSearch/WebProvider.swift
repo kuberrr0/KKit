@@ -13,7 +13,7 @@ struct WebOptions: Sendable {
 /// ("yt lofi"), matching bookmarks, and "Search Google for …" as the last row.
 @MainActor
 final class WebProvider: SearchProvider {
-    static let prefixText = "w "
+    nonisolated static let prefixText = "w "
 
     let id = "web"
     let displayName = String(localized: "Web")

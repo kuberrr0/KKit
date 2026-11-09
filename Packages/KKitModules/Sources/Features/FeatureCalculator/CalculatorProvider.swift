@@ -5,7 +5,7 @@ import KKitCore
 /// looks like a calculation. ↵ copies the answer.
 @MainActor
 final class CalculatorProvider: SearchProvider {
-    static let prefixText = "="
+    nonisolated static let prefixText = "="
 
     let id = "calculator"
     let displayName = String(localized: "Calculator")

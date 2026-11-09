@@ -6,7 +6,7 @@ import KKitServicesAPI
 /// only for three or more letters and shows a few, below apps and commands.
 @MainActor
 final class FilesProvider: SearchProvider {
-    static let prefixText = "f "
+    nonisolated static let prefixText = "f "
 
     let id = "files"
     let displayName = String(localized: "Files & Folders")

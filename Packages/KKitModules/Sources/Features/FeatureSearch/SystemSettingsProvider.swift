@@ -83,7 +83,7 @@ struct SystemSettingsPane: Sendable, Hashable {
 /// System Settings panes. `/` lists them all.
 @MainActor
 final class SystemSettingsProvider: SearchProvider {
-    static let prefixText = "/"
+    nonisolated static let prefixText = "/"
 
     let id = "systemSettings"
     let displayName = String(localized: "System Settings")

@@ -11,6 +11,7 @@ public struct ProviderEntry {
     /// Root search weight (1 for most; files count less).
     public let weight: Double
 
+    @MainActor
     public init(owner: FeatureID, provider: any SearchProvider, weight: Double = 1) {
         self.key = "\(owner.rawValue).\(provider.id)"
         self.owner = owner

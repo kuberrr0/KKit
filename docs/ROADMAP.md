@@ -22,34 +22,44 @@ dependency table behind this order.
 - **Power** (assertions, durations, Island indicator)
 - **Stats** (CPU, memory, storage, battery, network; menu bar items; alerts)
 - **Night Shift** (gamma-based, intensity up to 200%, schedule, extra dim)
-- **Volume** (CoreAudio volume/devices, Island HUD; media-key takeover once Input tap lands)
-- **Quick Toggles pack**
+- **Volume & Audio** (CoreAudio volume, device switching, mic mute, Island HUD; media-key
+  takeover once the input tap lands)
+- **Privacy Indicator** (mic/camera in use, in the Island)
+- **Timer, Pomodoro & Stopwatch**
+- **Quick Toggles**
 
 ## M2 — Floating Bar
 
-- **Floating Bar host** (panel, providers, ranking, pins, ⌘K actions, modes)
-- Providers: commands, apps, files, System Settings, web, calculator
+- **Floating Bar host** (launcher panel, providers, ranking, favourites/recents, ⌘K actions, modes, inline command arguments)
+- Providers: commands, apps, files, System Settings, web
+- **Calculator, Units & Currency**
 - **Quick Note** (Obsidian targets, templates, editor mode)
 - URL scheme and the *Run KKit Command* App Intent
 
 ## M3 — Capture & clipboard
 
 - **Clipboard History** (SQLite + FTS, picker panel, paste stack, snippets)
-- **Screen Tools** (screenshot, OCR, QR, colour picker, recording)
+- **Screen Tools** (screenshot, OCR, QR scan, translate, colour picker, recording)
 - **Shelf** (Island drop zone, item actions)
 
 ## M4 — Input power-user features
 
-- **InputTapService** (single shared event tap)
+- **InputTapService** (single shared event tap, keyboard + armed mouse events)
 - **Keyboard**: Hyper key, app launch hotkeys, leader sequences, cheat sheet
-- Volume media-key takeover, menu-items provider for the Floating Bar
-- Per-app volume (process taps)
+- **Window Management**: snap hotkeys, drag-to-snap, modifier + mouse move/resize, layouts
+- **Clean Mode**
+- Volume media-key takeover and push-to-talk, per-app volume (process taps)
+- Menu-items provider (`m `) for the Floating Bar
 
-## M5 — Extras (pick from DESIGN.md §4)
+## M5 — Menu Bar Manager
 
-Window management, timer/Pomodoro, mic mute + in-use indicator, next meeting,
-downloads watcher, on-device AI actions, external display brightness, menu bar manager,
-screenshot annotation.
+- **MenuBarItemsService** + **Menu Bar Manager** (sections, drop-down bar for hidden and
+  behind-the-notch icons). Last of the core features because it's the most fragile.
+
+## M6 — Extras (pick from DESIGN.md §4)
+
+Next meeting, downloads watcher, on-device AI actions, external display brightness,
+screenshot annotation, text expansion.
 
 ## Release track (in parallel from M1)
 

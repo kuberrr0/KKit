@@ -40,7 +40,7 @@ windows. That keeps the app consistent and is what makes new features cheap.
 |---|---|---|
 | **Menu bar extra** | Quick toggles, mini stats, entry to Settings | Clicking the KKit icon |
 | **Island** (notch overlay) | Live status, HUDs, drop target for the Shelf, now playing | Always present; expands on hover/click |
-| **Floating Bar** | Search, commands, pinned items, Quick Note, clipboard | Hotkey (default `⌥Space`, or `Hyper+Space`) |
+| **Floating Bar** | Launcher: search, commands, Quick Note, clipboard, calculator | Hotkey (default `⌥Space`, or `Hyper+Space`) |
 | **Settings window** | Per-feature configuration, permissions, all shortcuts | Menu bar, Floating Bar, `⌘,` |
 | **Overlays** | Full-screen helpers: capture region picker, colour loupe, recording bar, Night Shift tint | Started by a command |
 
@@ -73,12 +73,9 @@ windows. That keeps the app consistent and is what makes new features cheap.
 
 ### 2.2 Island (the "Floating Dock")
 
-> **Assumption:** the brief says *"Floating Dock (works like the floating island on iPhone
-> but for mac, like with …)"* and the sentence was cut off. This design reads it as a
-> **Dynamic Island–style overlay around the MacBook notch**: it shows live activities,
-> replaces the system HUDs, and acts as a drop target. If "like with …" meant something
-> specific (a particular app, music, AirDrop, calls), tell me and I'll adjust this section.
-> In the UI it's called **Island**, so it isn't confused with the macOS Dock or the Floating Bar.
+This is a **Dynamic Island–style overlay around the MacBook notch** (confirmed): it shows
+live activities, replaces the system HUDs, and acts as a drop target. In the UI it's
+called **Island**, so it isn't confused with the macOS Dock or the Floating Bar.
 
 The Island is a black, borderless panel drawn over the notch so it looks like the notch
 itself grows. On Macs without a notch, and on external displays, it's a pill that slides
@@ -124,49 +121,48 @@ Drop target     While a file drag is in progress and the cursor nears the notch,
 
 ### 2.3 Floating Bar
 
-> **Interpretation:** "Floating Bar (for file, browser, settings, actions, menu bar items,
-> this app's features)" can mean a *launcher you type into* (like Spotlight) or a *toolbar
-> of pinned things*. The design does both in one panel: a **pinned row** on top and a
-> **command field** below. Either half can be turned off.
+A **launcher**: press the hotkey, type, press `↵`. It's the keyboard front door to
+everything in KKit, your files, the web, System Settings and other apps' menus.
 
 ```
-┌────────────────────────────────────────────────────────────────────┐
-│ 📁 Projects  🌐 GitHub  ⚙︎ Wi-Fi  ☕︎ Awake  📝 Inbox.md  ⋯   (pins)  │
-├────────────────────────────────────────────────────────────────────┤
-│ 🔍  night sh▌                                       [All ▾]  ⌘K    │
-├───────────────────────────────────────┬────────────────────────────┤
-│ 🌙 Night Shift: Toggle        ⌃⌥N    │  Night Shift               │
-│ 🌙 Night Shift: Set intensity…        │  Currently off             │
-│ 🌙 Night Shift: Darkroom mode         │  Schedule: sunset→sunrise  │
-│ ⚙︎  System Settings › Displays › Ni…  │                            │
-│ 📄 night-shift-notes.md   ~/Vault     │  [Toggle]  [Settings…]     │
-├───────────────────────────────────────┴────────────────────────────┤
-│ ↵ Run   ⌘↵ Run & keep open   ⌘K Actions   Tab Preview   ⎋ Close    │
-└────────────────────────────────────────────────────────────────────┘
+Empty query                                    Typing
+┌──────────────────────────────────────────┐   ┌──────────────────────────────────────────────────────────────┐
+│ 🔍  Search or type a command…       ⌘K   │   │ 🔍  night sh▌                              [All ▾]  ⌘K      │
+├──────────────────────────────────────────┤   ├─────────────────────────────────────┬────────────────────────┤
+│ FAVOURITES                               │   │ 🌙 Night Shift: Toggle      ⌃⌥N     │  Night Shift           │
+│  📁 Projects            ~/Code           │   │ 🌙 Night Shift: Set intensity…      │  Currently off         │
+│  🌐 GitHub              github.com       │   │ 🌙 Night Shift: Darkroom mode       │  Schedule: sunset→…    │
+│  📝 Inbox.md            Quick Note       │   │ ⚙︎  System Settings › Displays › …  │                        │
+│ RECENT                                   │   │ 📄 night-shift-notes.md  ~/Vault    │  [Toggle] [Settings…]  │
+│  🪟 Window: Left Half          ⌃⌥←       │   ├─────────────────────────────────────┴────────────────────────┤
+│  🧮 1920/1080 = 1.7778                   │   │ ↵ Run   ⌘↵ Run & keep open   ⌘K Actions   Tab Preview   ⎋    │
+└──────────────────────────────────────────┘   └──────────────────────────────────────────────────────────────┘
 ```
 
-- **Pinned row:** files, folders, URLs, apps, KKit commands/toggles (show live state),
-  other apps' menu bar items, and widgets (e.g. a tiny Quick Note field). Drag anything
-  in to pin it.
+- **Empty state** shows *Favourites* (anything you starred with ⌘K → *Add to Favourites*)
+  and *Recent* results, so common things are one `↵` away.
 - **Search sources ("providers")** are contributed by features. Each has a prefix to scope
   the search:
 
   | Prefix | Source | Notes |
   |---|---|---|
   | *(none)* | Everything, ranked by frecency + fuzzy match | |
-  | `>` | Commands (all KKit features + system actions) | Lock, sleep, empty Trash, dark mode, eject all… |
+  | `>` | Commands (all KKit features + system actions) | Lock, sleep, empty Trash, dark mode, eject all, window layouts… |
   | `f ` | Files & folders | Spotlight (`NSMetadataQuery`) |
   | `w ` | Web: URLs, search engines, bookmarks, open tabs | Tabs need Automation permission per browser |
   | `/` | System Settings panes | Deep links via `x-apple.systempreferences:` |
-  | `m ` | Menu items of the frontmost app & menu bar extras | Accessibility API |
+  | `m ` | Menu items of the frontmost app, and menu bar icons (incl. hidden ones) | Accessibility API; shares data with the Menu Bar Manager |
   | `c ` | Clipboard history | |
   | `n ` | Quick Note | Switches the panel into the note editor |
-  | `=` | Calculator / units / currency | Inline result, `↵` copies |
+  | `=` | Calculator, units, currency, dates, time zones | Also detected automatically: typing `2^10` shows the result first |
 
+- **Commands with arguments** parse inline: `timer 25m`, `awake 2h`, `vol 30`,
+  `night 150`, `win left`. The command's parameter type (duration, percent, choice) does
+  the parsing, so every feature gets this for free.
 - **⌘K** opens an action menu for the selected result (Reveal in Finder, Copy path,
-  Open with…, Add to Shelf, Pin, Assign hotkey…). Actions are also contributed by features.
-- **Placement:** centred on the active screen by default; can be docked to the top or a
-  screen edge, and can be *pinned open* to behave like a persistent floating toolbar.
+  Open with…, Add to Shelf, Add to Favourites, Assign hotkey…). Actions are also
+  contributed by features.
+- **Placement:** centred on the screen with the cursor; optional "top of screen" position.
 - Remembers the last query for 30 s so ⎋ then reopen doesn't lose work.
 
 ### 2.4 Settings window
@@ -215,20 +211,53 @@ Each feature below lists: what it does, where it shows up, key interactions, set
 and the macOS permissions/APIs involved. Tech notes are summarised here and detailed in
 the architecture doc.
 
-### 3.1 Volume Control
+| # | Feature | Origin |
+|---|---|---|
+| 3.1 | Volume & Audio (incl. device switching, mic mute) | Original + recommended |
+| 3.2 | Floating Bar (launcher) | Original |
+| 3.3 | Statistics | Original |
+| 3.4 | Power (always-on) | Original |
+| 3.5 | Island | Original ("Floating Dock") |
+| 3.6 | Screen Tools (incl. QR scan & translate) | Original + recommended |
+| 3.7 | Clipboard History | Original |
+| 3.8 | Shelf | Original |
+| 3.9 | Keyboard Shortcuts | Original |
+| 3.10 | Night Shift | Original |
+| 3.11 | Quick Local Note | Original |
+| 3.12 | Window Management (incl. modifier + mouse move/resize) | Recommended |
+| 3.13 | Menu Bar Manager | Recommended |
+| 3.14 | Quick Toggles | Recommended |
+| 3.15 | Privacy Indicator (mic & camera in use) | Recommended |
+| 3.16 | Timer, Pomodoro & Stopwatch | Recommended |
+| 3.17 | Calculator, Units & Currency | Recommended |
+| 3.18 | Clean Mode (clean keyboard) | Recommended |
 
-- **Does:** replaces the system volume HUD with an Island HUD; finer volume steps;
-  output/input device switching; **per-app volume mixer**; optional max-volume limit;
-  global mic mute.
-- **Surfaces:** Island HUD, menu bar slider + device picker, Floating Bar commands
-  (`Volume: 30%`, `Output: AirPods`), Quick Toggle (mic mute).
+### 3.1 Volume & Audio
+
+Includes the recommended *Audio devices & mic mute* feature.
+
+- **Does:**
+  - Replaces the system volume HUD with an Island HUD; finer volume steps; optional
+    max-volume limit.
+  - **Per-app volume mixer** (turn Zoom up and Music down independently).
+  - **Output and input device switching**, with an auto-switch priority list
+    ("AirPods when connected, else Studio Display, else built-in speakers").
+  - **Global mic mute**: one hotkey mutes the current input device in every app. While
+    muted and an app is using the mic, the Island shows a red 🎤̸ ear; click it to unmute.
+    Optional **push-to-talk** (hold a key to unmute) and **push-to-mute**.
+- **Surfaces:** Island HUD and mic-muted indicator, menu bar sliders + device pickers,
+  Quick Toggle tile (mic mute), Floating Bar commands (`vol 30`, `Output: AirPods`,
+  `Mute mic`).
 - **Interactions:** media keys show the Island HUD; scrolling on the Island changes volume;
   `⌥` + scroll gives fine steps; click the device name to switch output.
 - **Settings:** step size (1–10%), volume limit, HUD style, per-app volumes (remembered),
-  "Switch to AirPods when connected".
-- **Tech:** CoreAudio (`AudioObjectSetPropertyData` on the default output device's
-  virtual main volume); per-app volume via Core Audio process taps (macOS 14.2+);
-  intercepting volume keys needs a `CGEventTap` (Accessibility permission).
+  device priority lists for output and input, mic-mute hotkey, push-to-talk key,
+  "play a sound on mute/unmute".
+- **Tech:** CoreAudio (`AudioObjectSetPropertyData` on the device's virtual main volume and
+  `kAudioDevicePropertyMute` on the input scope; falls back to input volume 0 for
+  devices without a mute control); per-app volume via Core Audio process taps
+  (macOS 14.2+); volume-key takeover and push-to-talk need the shared `CGEventTap`
+  (Accessibility permission).
 
 ### 3.2 Floating Bar
 
@@ -236,7 +265,7 @@ See §2.3 for the full design. It's a *host*: on its own it only knows how to sh
 results; files, web, settings, menu items, clipboard, notes and commands are all
 providers contributed by features.
 
-- **Settings:** hotkey, which providers are on and their prefixes, pinned items, placement,
+- **Settings:** hotkey, which providers are on and their prefixes, favourites, placement,
   theme (compact/regular), browser for web results, search engines.
 - **Permissions:** Accessibility (menu items), Automation (browser tabs), none for the rest.
 
@@ -293,7 +322,11 @@ See §2.2. It's a *host* like the Floating Bar: features push **activities** int
 - **Does:**
   - **Screenshot:** area, window, full screen, timer; pin as a floating window; copy/save.
   - **OCR:** select an area → recognised text is copied (and can go to a Quick Note).
-    Includes QR/barcode reading.
+  - **QR & barcode scan:** select an area (or scan the whole screen) → the link or text is
+    copied, with "Open link" as the main action.
+  - **Translate:** select an area → OCR → translated on-device; the result shows in a
+    small floating card with Copy. Also works on clipboard text and Floating Bar input
+    (`tr hola`).
   - **Colour picker:** system loupe; copies in your chosen format (HEX, RGB, HSL, SwiftUI,
     CSS); keeps a colour history.
   - **Screen recording:** area/window/screen, system audio + mic, optional click and
@@ -304,7 +337,8 @@ See §2.2. It's a *host* like the Floating Bar: features push **activities** int
 - **Settings:** save folder, filename pattern, format, after-capture action, shortcuts
   (optionally take over `⇧⌘3/4/5`; the user disables the system ones), OCR languages.
 - **Tech:** ScreenCaptureKit (`SCScreenshotManager`, `SCStream`, `SCRecordingOutput` on
-  macOS 15+), Vision text recognition, `NSColorSampler`. Needs **Screen Recording**
+  macOS 15+), Vision text recognition and barcode detection, the Translation framework
+  (on-device, macOS 15+; languages download on first use), `NSColorSampler`. Needs **Screen Recording**
   permission (screenshot/recording/OCR) and **Microphone** for mic audio.
 
 ### 3.7 Clipboard History
@@ -329,7 +363,7 @@ See §2.2. It's a *host* like the Floating Bar: features push **activities** int
 - **Does:** a temporary holding area for files, images, text and links; drag things in,
   drag them out later (one, several, or all).
 - **Surfaces:** Island drop zone (drag a file toward the notch), Shelf page in the expanded
-  Island, Floating Bar pin, optional mini shelf at a screen edge.
+  Island, *Add to Shelf* action on any Floating Bar result, optional mini shelf at a screen edge.
 - **Item actions:** AirDrop, Share, Copy, Reveal, Open With, Rename, Compress (zip),
   Convert image (PNG/JPEG/HEIC/WebP, resize), Merge PDFs, Copy path, Remove.
 - **Settings:** keep a *reference* vs. *copy* of the file, auto-clear after N hours,
@@ -382,7 +416,7 @@ See §2.2. It's a *host* like the Floating Bar: features push **activities** int
      missing.
   3. **New note in a folder**: first line becomes the title/filename.
 - **Surfaces:** `n ` prefix or a dedicated hotkey turns the Floating Bar into a small
-  editor; a pinned "Quick Note" widget in the pinned row; "Send to note" actions from
+  editor; "Send to note" actions from
   Clipboard, OCR and Shelf.
 - **Editor:** monospaced markdown with light syntax highlighting, `⌘↵` save & close,
   `⌘⇧↵` save & open in Obsidian, `Tab` switches target, an optional `#tag` / link
@@ -393,35 +427,156 @@ See §2.2. It's a *host* like the Floating Bar: features push **activities** int
   Obsidian picks up changes from disk. Opens notes via `obsidian://open?vault=…&file=…`.
   Folder access is remembered with a bookmark.
 
+### 3.12 Window Management
+
+- **Does:**
+  - **Snap with hotkeys:** halves, thirds, two-thirds, quarters, maximise, almost-maximise,
+    centre, restore, move to next/previous display, grow/shrink. Repeating a hotkey
+    cycles sizes (`⌃⌥←` → ½ → ⅓ → ⅔).
+  - **Drag to snap:** drag a window to an edge or corner and a translucent preview shows
+    where it'll land. (macOS 15+ has basic tiling; KKit can replace it or stay out of its
+    way.)
+  - **Modifier + mouse to move and resize:** hold a modifier (default `⌃⌥`) and
+    - **left-drag anywhere in a window** to move it (no need to find the title bar),
+    - **right-drag** (or `⌃⌥⇧` + left-drag) to **resize from the nearest corner/edge**,
+    - optional: modifier + scroll to resize around the centre, modifier + double-click to
+      maximise/restore.
+    The window under the cursor is used, not just the active one, and is raised and
+    focused on drag (setting).
+  - **Layouts:** save the current arrangement of apps as a named layout and restore it
+    with a command or hotkey (`Layout: Coding`), optionally tied to a display setup.
+- **Surfaces:** Floating Bar commands (`win left`, `Layout: Coding`), hotkeys, snap preview
+  overlay, Settings page with a visual grid of snap hotkeys.
+- **Settings:** modifier key(s) for move and resize, which mouse button resizes, resize
+  from nearest corner vs. always bottom-right, raise on drag, snap while modifier-dragging,
+  gaps between windows, excluded apps (games, remote desktops), override macOS tiling.
+- **Tech:** Accessibility API (`AXUIElement` position/size attributes;
+  `AXUIElementCopyElementAtPosition` to find the window under the cursor). Window updates
+  are throttled to the display refresh rate because AX calls are slow. Modifier + mouse
+  must *swallow* the click so the app underneath doesn't receive it, which is only
+  possible with an event tap, so it uses the shared **InputTapService** (see
+  [ARCHITECTURE.md §7](ARCHITECTURE.md#7-shared-services)). Needs **Accessibility**.
+
+> **Where does modifier + mouse belong?** In **Window Management**. "Input" in KKit is a
+> shared *service* (the single event tap), not a feature: Window Management, Keyboard,
+> Clean Mode and Volume all *use* it. The behaviour belongs to the feature whose job it
+> is (moving windows); the plumbing belongs to the service.
+
+### 3.13 Menu Bar Manager
+
+- **Does:** tidies the menu bar, which matters a lot on notched MacBooks where icons
+  disappear behind the notch.
+  - Three sections: **Always shown**, **Hidden** (revealed on click/hover of a `‹`
+    chevron), and **Always hidden** (only reachable from the drop-down bar or the
+    Floating Bar).
+  - **Drop-down bar:** hidden icons (and icons pushed behind the notch) appear in a
+    small bar under the menu bar, and clicking one opens its menu as normal.
+  - Auto-hide again after N seconds; show all while `⌘` is held over the menu bar.
+  - Rearrange: `⌘`-drag icons into sections, or use the Settings list.
+  - Spacing: tighter icon spacing so more fit.
+- **Surfaces:** a chevron/separator status item, the drop-down bar (an overlay panel),
+  Floating Bar `m ` provider ("search menu bar icons"), Settings page with a draggable
+  list of current icons.
+- **Settings:** sections, reveal on hover vs. click, auto-hide delay, show drop-down bar
+  instead of expanding in place, icon spacing.
+- **Tech:** the established technique: separator status items whose length grows to push
+  hidden items off-screen; listing other apps' items via the window list and
+  Accessibility; opening an item by pressing its AX element. Needs **Accessibility**, and
+  **Screen Recording** to show item images in the drop-down bar. This is the most fragile
+  feature across macOS updates, so it's isolated in its own service and feature flag,
+  and should step back where newer macOS versions offer their own menu bar controls.
+
+### 3.14 Quick Toggles
+
+- **Does:** one-tap system switches, each also a command and hotkey:
+  dark mode, hide desktop icons, show hidden files, Do Not Disturb/Focus, Wi-Fi,
+  Bluetooth, eject all disks, empty Trash, lock screen, sleep displays, keep
+  screen-saver off, toggle Dock auto-hide, toggle menu bar auto-hide.
+- **Surfaces:** menu bar popover grid (§2.1), Floating Bar commands, hotkeys.
+- **Settings:** which toggles appear in the grid and their order.
+- **Tech:** a mix, chosen per toggle to avoid restarts where possible: Wi-Fi via CoreWLAN;
+  hide desktop icons via a click-through window showing the wallpaper (no Finder restart);
+  hidden files via Finder defaults + relaunch; dark mode, Dock and empty Trash via
+  AppleScript (Automation permission, asked per target app); Focus via a Shortcuts.app
+  shortcut that KKit installs; eject via `NSWorkspace`; lock/sleep via system calls.
+  Bluetooth power has no public API, so it's behind the private-API rule.
+
+### 3.15 Privacy Indicator (mic & camera in use)
+
+- **Does:** shows in the Island when any app is using the **microphone** or **camera**,
+  with the app's icon where macOS exposes it. Pairs with mic mute: the ear turns red when
+  you're muted, and clicking it toggles mute.
+- **Surfaces:** Island compact activity (high priority), expanded page listing the apps
+  currently using each device, optional log of recent use.
+- **Settings:** show for mic / camera / both, show app names, keep a 7-day usage log.
+- **Tech:** CoreAudio `kAudioDevicePropertyDeviceIsRunningSomewhere` and audio process
+  objects (which process is capturing input) for the mic; CoreMediaIO
+  `kCMIODevicePropertyDeviceIsRunningSomewhere` for cameras (camera app attribution isn't
+  public, so it shows "Camera in use" without a name). No permissions needed to observe.
+
+### 3.16 Timer, Pomodoro & Stopwatch
+
+- **Does:** countdown timers (several at once, with labels: `timer 10m tea`), Pomodoro
+  cycles (25/5 with a long break every 4, all configurable), and a stopwatch with laps.
+- **Surfaces:** Island compact activity with the remaining time (progress ring on the
+  left ear), expanded page with controls, Floating Bar commands with inline durations,
+  menu bar tile, end-of-timer Island alert + sound + optional system notification.
+- **Settings:** Pomodoro lengths, sounds, "start Focus during Pomodoro" (via Shortcuts),
+  auto-start next interval, keep a history of completed sessions.
+- **Tech:** pure app logic; schedules a `UNNotification` as a backup so a timer still
+  fires if KKit is restarted.
+
+### 3.17 Calculator, Units & Currency
+
+- **Does:** maths (`(1920/1080)*100`, `2^10`, `sqrt 2`, percentages), units
+  (`5 ft in cm`, `72 F to C`, `3 GB in MB`), currency (`100 usd in inr`), dates
+  (`today + 45 days`, `days until dec 25`), time zones (`5pm PST in IST`), and base
+  conversion (`0xff in dec`).
+- **Surfaces:** Floating Bar `=` prefix, and automatic: if the root query looks like
+  maths, the result is the first row. `↵` copies the result, `⌘↵` pastes it.
+- **Settings:** decimal places, default currency, refresh rates daily (on/off),
+  thousands separator.
+- **Tech:** a small safe expression parser (not `NSExpression`, which can crash on bad
+  input), Foundation `Measurement` for units, a free exchange-rate API cached for 24 h
+  (works offline with the last rates).
+
+### 3.18 Clean Mode (clean keyboard)
+
+- **Does:** locks the keyboard (and optionally the trackpad/mouse) so you can wipe it
+  without typing anything.
+  - **Keyboard only** (default): a full-screen overlay shows "Keyboard locked — clean
+    away" with a countdown and an **Unlock** button you click.
+  - **Everything locked:** keyboard + trackpad + mouse, with a fixed countdown
+    (30/60/90 s) as the only way out.
+  - Media and brightness keys are blocked too; it auto-unlocks after 2 minutes no matter
+    what, as a safety net.
+- **Surfaces:** Floating Bar command, Quick Toggle tile, hotkey, the overlay.
+- **Settings:** default mode, countdown length.
+- **Tech:** the shared InputTapService consumes all key, flags-changed, system-defined
+  (media key) and optionally mouse events; OverlayService draws the overlay on every
+  display. The power/Touch ID button can't be blocked, which the overlay says.
+  Needs **Accessibility** + **Input Monitoring**.
+
 ---
 
-## 4. Suggested additional features
+## 4. More feature ideas (not yet planned)
 
-Grouped by how much they'd add versus how hard they are. ★ = recommended early, because
-they reuse services the core features already need.
+Everything that was starred, plus Clean Mode and the Menu Bar Manager, has moved into §3.
+These are the remaining ideas, for later.
 
-### High value, cheap (reuse existing services)
+### Cheap (reuse existing services)
 
 | Feature | What it does | Reuses |
 |---|---|---|
-| ★ **Quick Toggles pack** | Dark mode, hide desktop icons, show hidden files, Do Not Disturb/Focus, Bluetooth, Wi-Fi, eject all disks, empty Trash, lock screen | Commands, Quick Toggles |
-| ★ **Audio devices & mic mute** | Global mic-mute hotkey with an Island indicator (great for calls), auto-switch output | Volume's audio service, Island |
-| ★ **Mic/camera in-use indicator** | Island shows which app is using the mic/camera | Island, audio/video device state |
-| ★ **Timer / Pomodoro / Stopwatch** | Countdown in the Island, notification at the end, optional Focus mode | Island, Commands |
-| ★ **Calculator / units / currency** | `=` provider in the Floating Bar | Floating Bar |
-| ★ **QR code scan & translate** | Scan QR on screen; translate OCR text on-device (Translation framework) | Screen Tools, Vision |
 | **Next meeting** | Calendar's next event in the Island with a "Join" button for Zoom/Meet/Teams links | Island, EventKit |
 | **Downloads watcher** | New files in Downloads appear in the Island/Shelf for quick drag-out | Shelf, Island |
-| **Clean keyboard mode** | Lock all keys/trackpad for 60 s so you can wipe the keyboard | Input tap, Overlay |
 | **Scroll direction per device** | Natural scrolling on trackpad, normal on mouse | Input tap |
 | **Battery & Bluetooth device levels** | AirPods/mouse/keyboard battery in Stats and Island | Stats |
 
-### High value, more work
+### More work
 
 | Feature | What it does | Notes |
 |---|---|---|
-| ★ **Window management** | Snap/tile with hotkeys and drag-to-edge, layouts, move to display | Accessibility API; macOS 15 added basic tiling, so focus on hotkeys and layouts |
-| **Menu bar manager** | Hide/collapse other apps' menu bar icons; surface them in the Floating Bar | Fragile across macOS versions; pairs well with "menu bar items" in the Floating Bar |
 | **Text expansion / snippets** | `;sig` → signature, date macros | Shares Clipboard's snippet store and the input tap |
 | **External display brightness & volume** | DDC/CI control of external monitors from the brightness keys, in the same HUD | Displays service; works on most monitors |
 | **Screenshot annotation editor** | Arrows, text, blur, crop, then copy/save | Builds on Screen Tools |

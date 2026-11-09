@@ -109,12 +109,12 @@ KKit/
 │   │   ├── KKitServices/                # implementations: CoreAudioService, …
 │   │   ├── KKitHosts/
 │   │   │   ├── Island/                  # IslandHost, IslandWindow, layouts
-│   │   │   ├── FloatingBar/             # panel, query engine, ranking, pins
+│   │   │   ├── FloatingBar/             # panel, query engine, ranking, favourites
 │   │   │   ├── MenuBar/                 # status item + popover with toggle grid
 │   │   │   ├── Settings/                # window, sidebar, shortcuts table
 │   │   │   └── Onboarding/
 │   │   └── Features/
-│   │       ├── FeatureVolume/
+│   │       ├── FeatureVolume/           # volume, devices, per-app mixer, mic mute
 │   │       ├── FeatureStats/
 │   │       ├── FeaturePower/
 │   │       ├── FeatureNightShift/
@@ -125,7 +125,13 @@ KKit/
 │   │       ├── FeatureQuickNote/
 │   │       ├── FeatureFinder/           # files / web / settings / menu-item providers
 │   │       │                            # for the Floating Bar
-│   │       └── FeatureToggles/          # dark mode, hidden files, …
+│   │       ├── FeatureToggles/          # dark mode, hidden files, Wi-Fi, …
+│   │       ├── FeatureWindows/          # snapping, modifier+mouse move/resize, layouts
+│   │       ├── FeatureMenuBarManager/
+│   │       ├── FeaturePrivacyIndicator/ # mic/camera in use
+│   │       ├── FeatureTimer/
+│   │       ├── FeatureCalculator/
+│   │       └── FeatureCleanMode/
 │   └── Tests/                           # one test target per module
 ├── Helper/                              # (later) privileged helper
 ├── docs/
@@ -286,13 +292,13 @@ public struct Command: Identifiable, Sendable {
     public var defaultShortcut: Shortcut?    // nil = unbound by default
     public var parameter: CommandParameter?  // .percent, .duration, .text, .choice([…])
     public var isEnabled: @MainActor () -> Bool = { true }
-    public var state: (@MainActor () -> CommandState)? = nil   // .on/.off/.value for live pins & tiles
+    public var state: (@MainActor () -> CommandState)? = nil   // .on/.off/.value for live tiles & results
     public var perform: @MainActor (CommandInvocation) async throws -> Void
 }
 ```
 
 `QuickToggle` is a thin wrapper around a command with a state (`.on`/`.off`/`.value`), so a
-toggle tile in the menu bar, a pinned item in the Floating Bar, and a hotkey all stay in
+toggle tile in the menu bar, a Floating Bar result, and a hotkey all stay in
 sync.
 
 ---
@@ -350,7 +356,7 @@ public struct SearchResult: Identifiable, Sendable {
 
 The host owns: the pre-warmed panel, query parsing (prefix → provider), fan-out to
 providers with a 50 ms "first paint" deadline, merging and ranking (fuzzy match ×
-provider score × frecency stored in SQLite), keyboard navigation, the pinned row, the
+provider score × frecency stored in SQLite), keyboard navigation, the empty-state favourites and recents, the
 ⌘K action menu (filled from all features' `resultActions` that accept the result's
 `kind`), and *modes*: a feature can take over the panel's content area (Quick Note's
 editor, Clipboard's grid) via `FloatingBarMode`.
@@ -377,7 +383,7 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 |---|---|---|---|
 | **PermissionsService** | Status, request, open the right Settings pane, change notifications | `AXIsProcessTrusted`, `CGPreflightScreenCaptureAccess`, `IOHIDCheckAccess`, AVFoundation auth, EventKit auth | — |
 | **HotkeyService** | Register/unregister global shortcuts by `CommandID`, conflict detection, recorder UI | Carbon `RegisterEventHotKey` via KeyboardShortcuts | none |
-| **InputTapService** | The **single** `CGEventTap` for the app. Features add handlers with a priority; the first one that consumes an event wins | `CGEvent.tapCreate`, `hidutil` mappings | Accessibility, Input Monitoring |
+| **InputTapService** | The **single** `CGEventTap` for the app, for keyboard *and* mouse. Features add handlers with a priority; the first one that consumes an event wins. See below | `CGEvent.tapCreate`, `hidutil` mappings | Accessibility, Input Monitoring |
 | **OverlayService** | Create KKit panels with correct level, Spaces, full-screen and multi-display behaviour; region picker; click-through tint/dim overlays | `NSPanel`, `NSScreen`, `CGDisplayRegisterReconfigurationCallback` | — |
 | **AudioService** | Devices, default in/out, volume/mute, per-app volume via process taps, device change events | CoreAudio, `AudioHardwareCreateProcessTap` (14.2+) | Audio capture prompt for taps |
 | **DisplayService** | Displays, brightness (built-in + DDC later), gamma tables, re-apply on reconfiguration/wake | CoreGraphics `CGSetDisplayTransferByTable`, IOKit | — |
@@ -385,12 +391,46 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 | **SystemInfoService** | CPU, memory, disk, network, processes, thermal; **demand-driven sampling** (samples only while subscribed) | Mach host APIs, `libproc`, `getifaddrs`, `URLResourceValues` | — |
 | **PasteboardService** | Change stream (polls `changeCount` at 250–500 ms), read typed items, write, synthetic paste | `NSPasteboard`, `CGEvent` | Accessibility (paste), pasteboard access prompt |
 | **ScreenCaptureService** | Shareable content, screenshot, stream/record, exclude KKit windows | ScreenCaptureKit | Screen Recording, Microphone |
-| **AccessibilityService** | Frontmost app, focused element, selected text, menu items, window frames | `AXUIElement` | Accessibility |
+| **AccessibilityService** | Frontmost app, focused element, selected text, app menu items | `AXUIElement` | Accessibility |
+| **WindowService** | Window under cursor, list/focus/raise windows, get/set frames (throttled to display refresh), screen visible frames, macOS tiling detection | `AXUIElement`, `CGWindowListCopyWindowInfo`, `NSScreen` | Accessibility |
+| **MenuBarItemsService** | List other apps' menu bar icons, their positions and images, press them, hide/show via separator items. Isolated because it's fragile | `NSStatusItem`, window list, `AXUIElement` | Accessibility, Screen Recording (icon images) |
+| **DeviceUsageService** | Which mic/camera is in use, and by which process where macOS says | CoreAudio process objects, CoreMediaIO | — |
 | **NowPlayingService** | Current track, artwork, controls; isolated because the backing API is unstable | MediaRemote (restricted since macOS 15.4) or AppleScript fallback | Automation |
 | **StorageService** | Per-feature folders, SQLite (GRDB) databases, JSON blobs, migrations | FileManager, GRDB | — |
 | **FileAccessService** | Remember user-picked folders (e.g. Obsidian vault) with bookmarks, watch for changes | Bookmarks, FSEvents / `DispatchSource` | — |
 | **NotificationService** | Route to Island first, fall back to system notifications | UserNotifications | Notifications |
 | **LocationService** | Approximate location / city for sunset times (or manual city) | CoreLocation | Location (optional) |
+
+### InputTapService in detail
+
+Keyboard, Window Management, Volume, Clean Mode and (later) scroll-direction all need to
+see or swallow low-level input. Several separate taps would each add latency and fight
+over event order, so there is exactly one, owned by this service.
+
+```swift
+public protocol InputHandler: AnyObject, Sendable {
+    var id: String { get }
+    var priority: InputPriority { get }            // .safety (Clean Mode) > .high > .normal
+    var interests: InputInterests { get }           // e.g. [.keys, .flags] or [.mouseButtons, .mouseDrag]
+    /// Must return within ~0.1 ms. Return .consume to swallow, .pass to let it through,
+    /// or .replace(events) to rewrite (Hyper key).
+    func handle(_ event: CGEvent, type: CGEventType) -> InputDecision
+}
+
+context.input.add(handler)          // returns a token; removed automatically on feature stop
+context.input.arm(handlerID, for: .mouseDrag)   // ask for expensive events only while needed
+```
+
+- **Event masks are built from the union of what running handlers need**, so if no
+  feature wants mouse events, the tap never sees them.
+- **Arming:** high-frequency events (mouse moved/dragged, scroll) are only added to the
+  mask while a handler arms them. Window Management watches `flagsChanged`; when the
+  move/resize modifier goes down it arms mouse events, and disarms when it's released.
+  So "modifier + mouse" costs nothing the rest of the time.
+- Handlers decide fast and hand real work (e.g. AX window moves) to `WindowService` on
+  another queue, coalesced to one update per display frame.
+- `.safety` priority lets Clean Mode swallow everything ahead of other handlers.
+
 
 ### Feature-published services
 
@@ -487,17 +527,24 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 
 | Feature | Island | Floating Bar | Menu bar | Hotkeys | Input tap | Overlay | Audio | Display | Power | SysInfo | Pasteboard | Capture | AX | Storage | Permissions needed |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Volume | ● HUD | ● cmds | ● slider | ● | ● media keys | | ● | | | | | | | ○ | Accessibility (keys) |
+| Volume & Audio | ● HUD, mic muted | ● cmds | ● sliders, devices | ● | ● media keys, push-to-talk | | ● | | | | | | | ○ | Accessibility (keys) |
 | Floating Bar host | | — | | ● | | ● | | | | | | | ○ menus | ● frecency | Accessibility (menu items), Automation (tabs) |
 | Stats | ● alerts, page | ● cmds | ● items | | | | | | ● battery | ● | | | | ○ history | — |
 | Power | ● indicator | ● cmds | ● tile | ● | | | | | ● | | | | | | — |
 | Island host | — | | | | | ● | ○ | | | | | | | | Automation (now playing fallback) |
 | Screen Tools | ● thumbnail, rec | ● cmds | ● | ● | | ● picker | ○ audio | | | | ● copy | ● | | ● | Screen Recording, Microphone |
 | Clipboard | ○ flash | ● provider, mode | ● | ● | | ● picker | | | | | ● | | ● paste | ● SQLite | Accessibility, pasteboard access |
-| Shelf | ● drop zone, page | ● pin, actions | ○ | ● | | | | | | | | | | ● | — |
+| Shelf | ● drop zone, page | ● actions | ○ | ● | | | | | | | | | | ● | — |
 | Keyboard | ○ cheat sheet | ● assign hotkey | | ● | ● Hyper, leaders | ● cheat sheet | | | | | | | | ● | Accessibility, Input Monitoring |
 | Night Shift | ○ | ● cmds | ● tile, slider | ● | | ● dim overlay | | ● gamma | ● wake | | | | | | Location (optional) |
 | Quick Note | ○ "saved" | ● mode, provider | | ● | | | | | | | ○ | | ○ selection | ● bookmark | — (folder picked by user) |
+| Window Management | | ● cmds | | ● | ● modifier + mouse, drag snap | ● snap preview | | | | | | | ● WindowService | ● layouts | Accessibility |
+| Menu Bar Manager | | ● `m ` provider | ● separators | ● | | ● drop-down bar | | | | | | ○ icon images | ● MenuBarItems | ● | Accessibility, Screen Recording |
+| Quick Toggles | | ● cmds | ● tiles | ● | | ○ hide desktop | | | | | | | | | Automation (per toggle) |
+| Privacy Indicator | ● ear, page | | | | | | ● DeviceUsage | | | | | | | ○ log | — |
+| Timer | ● countdown, alert | ● cmds | ● tile | ● | | | | | | | | | | ○ history | Notifications (optional) |
+| Calculator | | ● `=` provider | | | | | | | | | ● copy | | | ● rate cache | — |
+| Clean Mode | | ● cmd | ● tile | ● | ● swallow all | ● lock overlay | | | | | | | | | Accessibility, Input Monitoring |
 
 This table is also the build order hint: **Overlay, Hotkeys, Permissions, Settings and the
 Island are used by almost everything**, so they come first.
@@ -506,7 +553,7 @@ Island are used by almost everything**, so they come first.
 
 ## 11. Adding a new feature (the recipe)
 
-Example: a *Timer* feature.
+Example: the *Timer* feature (DESIGN.md §3.16), simplified.
 
 1. **Create the target.** Add `Sources/Features/FeatureTimer/` and a matching
    `.target(name: "FeatureTimer", dependencies: ["KKitCore", "KKitUI", "KKitServicesAPI"])`
@@ -614,6 +661,8 @@ rules.
 | Night Shift >100% | Gamma tables conflict with other gamma apps; reset on display change; don't affect some HDR content | Re-apply on reconfiguration/wake; detect conflicts and warn |
 | Clipboard | Apple is moving toward prompting for programmatic pasteboard reads | Handle the prompt in onboarding; explain why |
 | Event tap | Disabled if slow; needs two permissions | One shared tap, strict time budget, auto re-enable |
-| Menu bar items in Floating Bar | Accessibility structure of other apps' status items changes between macOS versions | Keep in its own provider; feature-flag it |
+| Menu Bar Manager | Hiding and listing other apps' menu bar icons relies on techniques Apple can break in any release | Own service + feature flag; the Floating Bar `m ` provider still works for app menus if it breaks |
+| Window Management | AX window moves are slow and some apps ignore or fight them; conflicts with macOS tiling | Coalesce to one update per frame; per-app exclusions; detect and optionally disable system tiling |
+| Clean Mode | A stuck lock would leave the user without a keyboard | Hard 2-minute auto-unlock; if macOS disables the tap the lock fails open; keyboard-only mode always has a click-to-unlock button |
 | Permissions UX | Users deny and forget | Permissions page, per-feature reduced modes, just-in-time asks |
 | Notarization | Private frameworks and helper need care | Load private frameworks dynamically (`dlopen`) so the app still launches if they're missing |

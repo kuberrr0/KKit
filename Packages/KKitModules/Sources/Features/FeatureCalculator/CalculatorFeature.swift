@@ -20,7 +20,7 @@ public final class CalculatorFeature: Feature {
     let rates: ExchangeRateStore
     let provider: CalculatorProvider
 
-    public init(context: FeatureContext) {
+    public convenience init(context: FeatureContext) {
         self.init(context: context, source: OpenExchangeRateSource())
     }
 

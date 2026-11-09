@@ -211,6 +211,7 @@ struct SwitcherModelTests {
 
 @MainActor
 struct WindowSwitcherControllerTests {
+    @MainActor
     private struct Setup {
         let env: TestEnvironment
         let apps: FakeSwitcherApps

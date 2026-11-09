@@ -619,7 +619,7 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 | Privacy Indicator | ● ear, page | ● cmd | | | | | ● DeviceUsage, mute | | | | | | | ○ log | — |
 | Timer | ● countdowns, alert, page | ● cmds | ● tile | ● | | | | | | | | | | ● saved timers | Notifications (optional) |
 | Calculator | | ● `=` provider, auto-detect | | | | | | | | | ● copy | | | ● rate cache | — (network: exchange rates) |
-| Search | | ● apps, `f `, `/`, `w ` providers | | | | | | | | | | | | | — (Full Disk Access for Safari bookmarks) |
+| Search | | ● `a ` apps, `f `, `/`, `w ` providers | | | | | | | | | | | | | — (Full Disk Access for Safari bookmarks) |
 | Clean Mode | | ● cmds | ● tile | ● | ● swallow all (`.safety`) | ● lock overlay | | | | | | | | | Accessibility |
 
 This table is also the build order hint: **Overlay, Hotkeys, Permissions, Settings and the

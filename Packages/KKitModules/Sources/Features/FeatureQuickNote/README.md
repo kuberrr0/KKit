@@ -7,7 +7,7 @@ Floating Bar (DESIGN.md §3.11).
   today's daily note (`Daily/{yyyy}/{yyyy-MM-dd}.md`, created from a template), or a new
   note in a folder (first line → title and file name).
 - **Editor**: a Floating Bar mode (`n ` or the `quickNote.new` command). ⌘↵ saves and
-  closes, ⌘⇧↵ saves and opens the note in Obsidian, Tab/⇧Tab switch target, ⎋ goes back.
+  closes, ⌘⇧↵ saves and opens the note in Obsidian, Tab/⇧Tab switch target, ⎋ goes back to search (or closes when opened by hotkey).
   Light markdown colouring and `[[` completion from the vault's note names. The draft is
   kept until it's saved.
 - **Commands**: `quickNote.new`, `quickNote.append` (text argument: `add to note call mum`),

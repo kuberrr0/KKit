@@ -298,7 +298,8 @@ struct ClipboardPickerView: View {
             }
         case .cancel:
             if query.isEmpty {
-                context.dismiss()
+                // Back to search when opened from the bar; closes it otherwise.
+                context.exit()
             } else {
                 query = ""
             }

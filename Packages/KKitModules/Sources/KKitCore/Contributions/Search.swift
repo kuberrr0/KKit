@@ -200,7 +200,8 @@ public struct FloatingBarModeContext {
     public let initialText: String
     /// Hides the Floating Bar.
     public let dismiss: @MainActor () -> Void
-    /// Goes back to search.
+    /// Leaves the mode (⎋): back to search when it was opened from the bar (a prefix,
+    /// or a result run there), otherwise hides the bar.
     public let exit: @MainActor () -> Void
     /// Opens the owning feature's Settings page.
     public let openSettings: @MainActor () -> Void

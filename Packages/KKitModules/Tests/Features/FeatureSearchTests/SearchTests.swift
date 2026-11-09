@@ -153,6 +153,28 @@ struct AppsProviderTests {
         let names = AppIndex.scan(roots: [root], extras: []).map(\.name).sorted()
         #expect(names == ["Editor", "Tool"])
     }
+
+    @Test func prefixAloneListsEveryAppByName() {
+        let all = AppsProvider.all(apps)
+        #expect(all.map(\.title) == ["Safari", "Terminal", "Visual Studio Code"])
+        #expect(Set(all.map(\.score)) == [0.5])
+    }
+
+    /// Runs against this Mac's real app folders (CI runs on macOS), so it catches an
+    /// index that finds nothing at all.
+    @MainActor
+    @Test func findsInstalledAppsOnThisMac() async {
+        let provider = AppsProvider(index: AppIndex())
+        let textEdit = await lastBatch(provider.results(for: SearchQuery(text: "textedit")))
+        #expect(textEdit.first?.title == "TextEdit")
+        #expect(textEdit.first?.kind.fileURL?.path == "/System/Applications/TextEdit.app")
+        let finder = await lastBatch(provider.results(for: SearchQuery(text: "finder")))
+        #expect(finder.first?.title == "Finder")
+        let all = await lastBatch(provider.results(for: SearchQuery(text: "", isScoped: true)))
+        #expect(all.count > 10)
+        let none = await lastBatch(provider.results(for: SearchQuery(text: "")))
+        #expect(none.isEmpty)
+    }
 }
 
 @MainActor

@@ -41,6 +41,28 @@ final class FakeSearchProvider: SearchProvider {
     }
 }
 
+/// Answers after the first-paint deadline, like the app index on its first scan.
+@MainActor
+final class SlowSearchProvider: SearchProvider {
+    let id = "slow"
+    let displayName = "Slow"
+    let symbol = "tortoise"
+    let prefix: String? = "s "
+    let items: [SearchResult]
+
+    init(items: [SearchResult]) {
+        self.items = items
+    }
+
+    func results(for query: SearchQuery) -> AsyncStream<[SearchResult]> {
+        let items = items
+        return .task {
+            try? await Task.sleep(for: .milliseconds(150))
+            return items
+        }
+    }
+}
+
 struct QueryRouterTests {
     private let providers = [
         PrefixTarget(key: "search.files", prefix: "f "),
@@ -290,6 +312,46 @@ struct FloatingBarModelTests {
         model.exitMode()
         #expect(model.activeMode == nil)
         #expect(model.isEmptyState)
+    }
+
+    @Test func modesKnowWhetherEscapeGoesBackToSearch() {
+        model.query = "n buy milk"
+        #expect(model.activeMode?.returnsToSearch == true)
+        model.exitMode()
+        model.openMode(key: "quickNote.editor", text: "")
+        #expect(model.activeMode?.returnsToSearch == false)
+        model.exitMode()
+        model.openMode(key: "quickNote.editor", text: "", returnsToSearch: true)
+        #expect(model.activeMode?.returnsToSearch == true)
+        model.exitMode()
+        #expect(model.activeMode == nil)
+        #expect(model.isEmptyState)
+    }
+
+    @Test func slowProvidersFillInAfterTheFirstPaint() async {
+        let commands = model.commandProvider
+        let slow = SlowSearchProvider(items: [result("app:hello", "Hello App", score: 0.95)])
+        model.sources = {
+            FloatingBarSources(providers: [
+                ProviderEntry(owner: "floatingBar", provider: commands),
+                ProviderEntry(owner: "search", provider: slow),
+            ])
+        }
+        model.query = "hello"
+        await waitUntil { model.rows.count == 2 }
+        #expect(model.rows.map(\.result.id) == ["app:hello", "command:test.hello"])
+    }
+
+    @Test func aPrefixAloneListsMoreThanTheRootLimit() async {
+        let many = (0..<120).map { result("app:\($0)", "App \($0)", score: 0.5) }
+        let slow = SlowSearchProvider(items: many)
+        model.sources = {
+            FloatingBarSources(providers: [ProviderEntry(owner: "search", provider: slow)])
+        }
+        model.query = "s "
+        await waitUntil { !model.rows.isEmpty }
+        #expect(model.rows.count == 120)
+        #expect(model.rows.first?.result.id == "app:0")
     }
 
     @Test func favouritesAndRecentsFillTheEmptyBar() async {

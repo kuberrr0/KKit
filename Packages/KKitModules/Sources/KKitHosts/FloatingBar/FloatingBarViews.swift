@@ -14,7 +14,7 @@ enum FloatingBarLayout {
     static let messageHeight: CGFloat = 30
     static let listPadding: CGFloat = 6
     static let maxVisibleRows = 8
-    static let hintHeight: CGFloat = 96
+    static let hintHeight: CGFloat = 130
     static let noResultsHeight: CGFloat = 56
     static let modeHeaderHeight: CGFloat = 40
     static let actionRowHeight: CGFloat = 28
@@ -89,6 +89,8 @@ struct FloatingBarViewActions {
     var runAction: @MainActor (ResultAction) -> Void
     var modeContext: @MainActor (ActiveMode) -> FloatingBarModeContext
     var prefixes: @MainActor () -> [PrefixHint]
+    /// Leaves a mode for search, whichever way the mode was opened.
+    var backToSearch: @MainActor () -> Void
 }
 
 struct FloatingBarRootView: View {
@@ -100,7 +102,7 @@ struct FloatingBarRootView: View {
         ZStack(alignment: .top) {
             KKVisualEffect(material: .popover, cornerRadius: KKRadius.panel)
             if let mode = model.activeMode {
-                ModeContainer(mode: mode, context: actions.modeContext(mode))
+                ModeContainer(mode: mode, context: actions.modeContext(mode), backToSearch: actions.backToSearch)
                     .id(mode.id)
             } else {
                 searchContent
@@ -322,7 +324,11 @@ struct FloatingBarEmptyHint: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: KKSpacing.m) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 140), spacing: KKSpacing.m, alignment: .leading)],
+                alignment: .leading,
+                spacing: KKSpacing.xs
+            ) {
                 ForEach(prefixes) { hint in
                     HStack(spacing: KKSpacing.xs) {
                         KKKeyCap(hint.prefix.trimmingCharacters(in: .whitespaces))
@@ -525,20 +531,41 @@ struct FloatingBarPreview: View {
 struct ModeContainer: View {
     let mode: ActiveMode
     let context: FloatingBarModeContext
+    let backToSearch: @MainActor () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: KKSpacing.s) {
+                Button {
+                    backToSearch()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help(String(localized: "Back to search"))
+                .accessibilityLabel(String(localized: "Back to search"))
                 Image(systemName: mode.mode.symbol)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.secondary)
                 Text(mode.mode.title)
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
-                KKKeyCap("⎋")
-                Text("Back")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Button {
+                    context.exit()
+                } label: {
+                    HStack(spacing: KKSpacing.xs) {
+                        KKKeyCap("⎋")
+                        Text(mode.returnsToSearch ? String(localized: "Back") : String(localized: "Close"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, KKSpacing.l)
             .frame(height: FloatingBarLayout.modeHeaderHeight)

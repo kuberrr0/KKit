@@ -4,7 +4,7 @@ import KKitUI
 import SwiftUI
 
 /// The Floating Bar mode: a small markdown editor. ⌘↵ saves and closes, ⌘⇧↵ also
-/// opens the note in Obsidian, Tab switches the target, ⎋ goes back to search.
+/// opens the note in Obsidian, Tab switches the target, ⎋ leaves (back to search, or closes when opened by hotkey).
 struct QuickNoteEditorView: View {
     @Bindable var controller: QuickNoteController
     let context: FloatingBarModeContext

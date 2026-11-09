@@ -15,7 +15,8 @@ Everything you copy, searchable, with a picker, a paste stack and snippets
   Images are files in `clipboard/images/`. Pinned items are never trimmed.
 - **Picker**: a Floating Bar mode (`clipboard.showHistory`, ⇧⌘V by default). ↵ pastes,
   ⌘↵ pastes as plain text, ⌘1…9 quick paste, ⌘P pin, ⌘C copy, ⌫/⌘⌫ delete, Tab cycles the
-  filter (All, Pinned, Text, Links, Images, Files, Colours, Snippets), ⎋ clears then closes. Rows
+  filter (All, Pinned, Text, Links, Images, Files, Colours, Snippets), ⎋ clears, then goes back to search if the picker was opened from the bar
+  (otherwise closes it); the ‹ in the header always goes back to search. Rows
   can be dragged out. `c ` in the Floating Bar searches history and snippets too.
 - **Paste stack**: `clipboard.togglePasteStack` starts collecting; each copy joins the stack
   and `clipboard.pasteNext` pastes them oldest first. The stack shows in the Island.

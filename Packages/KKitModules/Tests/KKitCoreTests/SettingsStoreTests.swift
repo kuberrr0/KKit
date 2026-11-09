@@ -30,7 +30,8 @@ struct SettingsStoreTests {
         #expect(settings[Keys.intensity] == 1.4)
         #expect(settings[Keys.mode] == .amber)
         #expect(store.hasValue(for: "nightShift.intensity"))
-        #expect(store.value(for: "nightShift.intensity", default: 0.0) == 1.4)
+        let stored: Double = store.value(for: "nightShift.intensity", default: 0)
+        #expect(stored == 1.4)
     }
 
     @Test func featuresDontShareKeys() {

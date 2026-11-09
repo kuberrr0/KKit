@@ -77,7 +77,9 @@ let package = Package(
         .testTarget(name: "KKitUITests", dependencies: ["KKitCore", "KKitUI"]),
         .testTarget(
             name: "KKitServicesTests",
-            dependencies: ["KKitCore", "KKitServicesAPI", "KKitServices", "KKitServicesTesting"]
+            dependencies: [
+                "KKitCore", "KKitUI", "KKitServicesAPI", "KKitServices", "KKitServicesTesting", "KeyboardShortcuts",
+            ]
         ),
         .testTarget(
             name: "KKitHostsTests",

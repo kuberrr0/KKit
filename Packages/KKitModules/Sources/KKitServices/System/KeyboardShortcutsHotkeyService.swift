@@ -2,6 +2,7 @@ import AppKit
 import KeyboardShortcuts
 import KKitCore
 import KKitServicesAPI
+import KKitUI
 import Observation
 import SwiftUI
 
@@ -10,6 +11,12 @@ import SwiftUI
 ///
 /// User-recorded shortcuts are stored by KeyboardShortcuts in `UserDefaults`
 /// ("KeyboardShortcuts_cmd-<feature>-<verb>").
+///
+/// Recording uses KKit's own `KKKeyRecorder`, not KeyboardShortcuts' recorder: that one
+/// only pauses the handlers and leaves the Carbon hot keys registered, so macOS still
+/// takes every shortcut KKit already uses (Window Management's ⌃⌥ keys) before the
+/// recorder sees it. While any KKit recorder records, all hotkeys are unregistered.
+/// (`KeyboardShortcuts.isEnabled` would do the same, but it's a nonisolated static var.)
 @MainActor
 @Observable
 public final class KeyboardShortcutsHotkeyService: HotkeyService {
@@ -19,12 +26,15 @@ public final class KeyboardShortcutsHotkeyService: HotkeyService {
     @ObservationIgnored private var active: Set<CommandID> = []
     private let log = KKitLog.logger("hotkeys")
 
-    public init(commands: CommandRegistry) {
+    public init(commands: CommandRegistry, recording: KKShortcutRecording = .shared) {
         self.commands = commands
         commands.addObserver { [weak self] change in
             self?.apply(change)
         }
         apply(.added(Array(commands.commands.keys)))
+        recording.observe { [weak self] isRecording in
+            self?.setHotkeysRegistered(!isRecording)
+        }
     }
 
     public func shortcut(for command: CommandID) -> Shortcut? {
@@ -54,12 +64,28 @@ public final class KeyboardShortcutsHotkeyService: HotkeyService {
     }
 
     public func recorder(for command: CommandID) -> AnyView {
-        AnyView(KeyboardShortcuts.Recorder(for: shortcutName(for: command), onChange: { [weak self] _ in
-            self?.revision &+= 1
-        }))
+        AnyView(KKKeyRecorder(
+            shortcut: Binding(
+                get: { [weak self] in self?.shortcut(for: command) },
+                set: { [weak self] in self?.setShortcut($0, for: command) }
+            ),
+            requiresModifier: true,
+            placeholder: String(localized: "Record Shortcut")
+        ))
     }
 
     // MARK: Private
+
+    /// Unregisters every command's hot key with macOS (while a recorder records), or
+    /// registers them again.
+    private func setHotkeysRegistered(_ registered: Bool) {
+        let names = active.map(shortcutName(for:))
+        if registered {
+            KeyboardShortcuts.enable(names)
+        } else {
+            KeyboardShortcuts.disable(names)
+        }
+    }
 
     private func apply(_ change: CommandRegistry.Change) {
         switch change {

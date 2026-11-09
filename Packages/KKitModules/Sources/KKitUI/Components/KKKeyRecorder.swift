@@ -1,9 +1,10 @@
 import AppKit
+import Combine
 import KKitCore
 import SwiftUI
 
-/// Names for keys and shortcuts in KKit's own key fields (the Hyper key's bindings,
-/// push-to-talk). Letters follow the US layout's positions.
+/// Names for keys and shortcuts in KKit's own key fields (command shortcuts, the
+/// Hyper key's bindings, push-to-talk). Letters follow the US layout's positions.
 public enum KKKeyNames {
     private static let names: [Int: String] = {
         var names: [Int: String] = [
@@ -73,22 +74,110 @@ public enum KKKeyNames {
     }
 }
 
-/// A field that records one key with its modifiers, for KKit's own key settings (Hyper
-/// bindings, push-to-talk). Click, press the keys; ⎋ cancels, ⌫ clears. With
+/// Whether one of KKit's key recorders is waiting for a key.
+///
+/// KKit's global hotkeys are Carbon hot keys, and macOS hands a hot key to its owner
+/// before any window sees the key press. So while a recorder is recording, the hotkey
+/// service turns KKit's hotkeys off (`observe`), or a shortcut KKit already uses, like
+/// Window Management's ⌃⌥ keys, could never be recorded.
+@MainActor
+public final class KKShortcutRecording {
+    public static let shared = KKShortcutRecording()
+
+    public private(set) var isActive = false
+    private var recorders = 0
+    private var observers: [UUID: @MainActor (Bool) -> Void] = [:]
+
+    public init() {}
+
+    /// A recorder started waiting for a key.
+    public func begin() {
+        recorders += 1
+        update()
+    }
+
+    /// A recorder stopped. Calls must pair with `begin`.
+    public func end() {
+        guard recorders > 0 else { return }
+        recorders -= 1
+        update()
+    }
+
+    /// Called with `true` when the first recorder starts and `false` when the last stops.
+    @discardableResult
+    public func observe(_ handler: @escaping @MainActor (Bool) -> Void) -> UUID {
+        let id = UUID()
+        observers[id] = handler
+        return id
+    }
+
+    public func removeObserver(_ id: UUID) {
+        observers[id] = nil
+    }
+
+    private func update() {
+        let active = recorders > 0
+        guard active != isActive else { return }
+        isActive = active
+        for observer in observers.values {
+            observer(active)
+        }
+    }
+}
+
+/// What a recorder does with a key press.
+public enum KKKeyRecorderAction: Hashable, Sendable {
+    /// ⎋: stop without changing anything.
+    case cancel
+    /// ⌫: remove the shortcut.
+    case clear
+    /// Beep and keep waiting (a shortcut needs ⌃, ⌥ or ⌘).
+    case reject
+    case record(Shortcut)
+
+    /// With `requiresModifier`, a shortcut needs ⌃, ⌥ or ⌘ (⇧ alone types a character),
+    /// except F1–F20.
+    public static func forKeyDown(keyCode: Int, modifiers: Shortcut.Modifiers, requiresModifier: Bool) -> Self {
+        if modifiers.isEmpty, keyCode == Shortcut.Key.escape {
+            return .cancel
+        }
+        if modifiers.isEmpty, keyCode == Shortcut.Key.delete || keyCode == Shortcut.Key.forwardDelete {
+            return .clear
+        }
+        if requiresModifier, modifiers.subtracting(.shift).isEmpty, !Shortcut.Key.isFunctionKey(keyCode) {
+            return .reject
+        }
+        return .record(Shortcut(keyCode: keyCode, modifiers: modifiers))
+    }
+}
+
+/// A field that records one key with its modifiers: command shortcuts, the Hyper key's
+/// bindings, push-to-talk. Click, press the keys; ⎋ cancels, ⌫ clears. With
 /// `allowsModifierOnly`, pressing and releasing a modifier on its own records that key
-/// (Right ⌥, fn).
+/// (Right ⌥, fn). While it records, KKit's own hotkeys are off (`KKShortcutRecording`),
+/// so it can record a shortcut KKit already uses.
 public struct KKKeyRecorder: View {
     @Binding var shortcut: Shortcut?
     let allowsModifierOnly: Bool
     let requiresModifier: Bool
+    let placeholder: String
+    let recording: KKShortcutRecording
     @State private var isRecording = false
     @State private var monitor: Any?
     @State private var pendingModifierKey: Int?
 
-    public init(shortcut: Binding<Shortcut?>, allowsModifierOnly: Bool = false, requiresModifier: Bool = false) {
+    public init(
+        shortcut: Binding<Shortcut?>,
+        allowsModifierOnly: Bool = false,
+        requiresModifier: Bool = false,
+        placeholder: String = String(localized: "Record Key"),
+        recording: KKShortcutRecording = .shared
+    ) {
         self._shortcut = shortcut
         self.allowsModifierOnly = allowsModifierOnly
         self.requiresModifier = requiresModifier
+        self.placeholder = placeholder
+        self.recording = recording
     }
 
     public var body: some View {
@@ -114,19 +203,24 @@ public struct KKKeyRecorder: View {
             }
         }
         .onDisappear { stop() }
+        // Don't leave KKit's hotkeys off while the user is in another app.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
+            stop()
+        }
     }
 
     private var label: String {
         if isRecording {
             return String(localized: "Type a key…")
         }
-        return shortcut.map(KKKeyNames.string(for:)) ?? String(localized: "Record Key")
+        return shortcut.map(KKKeyNames.string(for:)) ?? placeholder
     }
 
     private func start() {
         stop()
         isRecording = true
         pendingModifierKey = nil
+        recording.begin()
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
             handle(event) ? nil : event
         }
@@ -137,6 +231,9 @@ public struct KKKeyRecorder: View {
             NSEvent.removeMonitor(monitor)
         }
         monitor = nil
+        if isRecording {
+            recording.end()
+        }
         isRecording = false
         pendingModifierKey = nil
     }
@@ -148,21 +245,18 @@ public struct KKKeyRecorder: View {
         switch event.type {
         case .keyDown:
             pendingModifierKey = nil
-            if modifiers.isEmpty, keyCode == Shortcut.Key.escape {
+            switch KKKeyRecorderAction.forKeyDown(keyCode: keyCode, modifiers: modifiers, requiresModifier: requiresModifier) {
+            case .cancel:
                 stop()
-                return true
-            }
-            if modifiers.isEmpty, keyCode == Shortcut.Key.delete {
+            case .clear:
                 shortcut = nil
                 stop()
-                return true
-            }
-            if requiresModifier, modifiers.isEmpty {
+            case .reject:
                 NSSound.beep()
-                return true
+            case .record(let recorded):
+                shortcut = recorded
+                stop()
             }
-            shortcut = Shortcut(keyCode: keyCode, modifiers: modifiers)
-            stop()
             return true
         case .flagsChanged:
             guard allowsModifierOnly, Shortcut.Key.isModifierKey(keyCode) else { return false }

@@ -63,5 +63,14 @@ public struct Shortcut: Hashable, Sendable, Codable {
         public static func isModifierKey(_ keyCode: Int) -> Bool {
             modifier(forKeyCode: keyCode) != nil || keyCode == function
         }
+
+        /// F1–F20, which work as shortcuts without a modifier.
+        public static let functionKeys: [Int] = [
+            122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111, f13, f14, f15, f16, f17, f18, f19, f20,
+        ]
+
+        public static func isFunctionKey(_ keyCode: Int) -> Bool {
+            functionKeys.contains(keyCode)
+        }
     }
 }

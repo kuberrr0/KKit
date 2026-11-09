@@ -23,7 +23,7 @@ use, and the exact steps to add a new feature.
 | Distribution | **Outside the Mac App Store**: Developer ID signed, notarized, auto-updates with Sparkle | The App Store sandbox doesn't allow global event taps, Accessibility control of other apps, gamma tables across displays, or private frameworks |
 | Project file | **XcodeGen** (`project.yml`) generates the `.xcodeproj` | `project.pbxproj` is painful to edit by hand or by Claude; `project.yml` is short and diff-friendly. The generated project is git-ignored |
 | Code layout | One local Swift package, `Packages/KKitModules`, with a target per module | Enforces boundaries (a feature can only import what it declares), fast incremental builds, `swift test` per module |
-| Dependencies | [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) (hotkey recorder + Carbon hotkeys), [Sparkle](https://sparkle-project.org) (updates), [GRDB](https://github.com/groue/GRDB.swift) (SQLite with full-text search for clipboard history) | Small, well-maintained, each replaces a lot of fiddly code |
+| Dependencies | [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) (Carbon hotkeys; recording uses KKit's own `KKKeyRecorder`, which turns the hotkeys off while it records), [Sparkle](https://sparkle-project.org) (updates), [GRDB](https://github.com/groue/GRDB.swift) (SQLite with full-text search for clipboard history) | Small, well-maintained, each replaces a lot of fiddly code |
 | Launch at login | `SMAppService.mainApp` | Built-in since macOS 13 |
 | Optional helper | Privileged helper via `SMAppService.daemon` | Only for advanced features (closed-lid awake, battery charge limit). Not in v1 |
 | Logging | `os.Logger`, one subsystem, one category per feature | Shows up in Console.app, filterable per feature |
@@ -438,7 +438,7 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 | Service | Responsibility | macOS APIs | Permission |
 |---|---|---|---|
 | **PermissionsService** | Status, request, open the right Settings pane, change notifications | `AXIsProcessTrusted`, `CGPreflightScreenCaptureAccess`, `IOHIDCheckAccess`, AVFoundation auth, EventKit auth | — |
-| **HotkeyService** | Register/unregister global shortcuts by `CommandID`, conflict detection, recorder UI | Carbon `RegisterEventHotKey` via KeyboardShortcuts | none |
+| **HotkeyService** | Register/unregister global shortcuts by `CommandID`, conflict detection, recorder UI | Carbon `RegisterEventHotKey` via KeyboardShortcuts; recorder is `KKKeyRecorder`, and all hotkeys are unregistered while one records (`KKShortcutRecording`) | none |
 | **InputTapService** | The **single** `CGEventTap` for the app, for keyboard *and* mouse. Features add handlers with a priority; the first one that consumes an event wins. See below | `CGEvent.tapCreate`, `hidutil` mappings | Accessibility, Input Monitoring |
 | **OverlayService** | Create KKit panels with correct level, Spaces, full-screen and multi-display behaviour; region picker; click-through tint/dim overlays | `NSPanel`, `NSScreen`, `CGDisplayRegisterReconfigurationCallback` | — |
 | **AudioService** | Devices, default in/out, volume/mute, per-app volume via process taps, device change events | CoreAudio, `AudioHardwareCreateProcessTap` (14.2+) | Audio capture prompt for taps |

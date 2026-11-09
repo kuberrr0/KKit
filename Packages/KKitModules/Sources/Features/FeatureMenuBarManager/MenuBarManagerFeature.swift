@@ -109,11 +109,8 @@ public final class MenuBarManagerFeature: Feature {
     }
 
     public var settingsPane: SettingsPane? {
-        SettingsPane { [controller, context] in
-            MenuBarManagerSettingsView(
-                controller: controller,
-                commandKeyAvailable: { context.permissions.status(of: .accessibility).isGranted }
-            )
+        SettingsPane { [controller] in
+            MenuBarManagerSettingsView(controller: controller)
         }
     }
 }

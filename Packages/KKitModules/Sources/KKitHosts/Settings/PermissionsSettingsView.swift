@@ -9,8 +9,19 @@ struct PermissionsSettingsView: View {
 
     var body: some View {
         KKForm {
+            if dependencies.permissions.isSignedAdHoc {
+                KKSection(
+                    footer: String(localized: "Copy Config/Local.xcconfig.example to Config/Local.xcconfig, put your team ID in it, run xcodegen generate and build again. Then allow each permission once more.")
+                ) {
+                    Label(
+                        String(localized: "This copy of KKit is signed without a team, so macOS forgets its permissions every time it's rebuilt."),
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .foregroundStyle(.orange)
+                }
+            }
             KKSection(
-                footer: String(localized: "KKit only asks for a permission when you turn on a feature that needs it.")
+                footer: String(localized: "KKit only asks for a permission when you turn on a feature that needs it. If a permission says Not allowed while its switch in System Settings is on, the switch belongs to an older build: remove KKit from that list with −, then allow it again.")
             ) {
                 ForEach(sortedPermissions) { permission in
                     PermissionRow(

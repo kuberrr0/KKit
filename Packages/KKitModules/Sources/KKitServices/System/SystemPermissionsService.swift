@@ -7,6 +7,7 @@ import IOKit.hid
 import KKitCore
 import KKitServicesAPI
 import Observation
+import Security
 import UserNotifications
 
 /// Reads and requests macOS privacy permissions with public APIs.
@@ -24,8 +25,13 @@ public final class SystemPermissionsService: PermissionsService {
     @ObservationIgnored private var notificationStatus: PermissionStatus = .notDetermined
     @ObservationIgnored private var locationManager: CLLocationManager?
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
+    public let isSignedAdHoc: Bool
 
     public init() {
+        isSignedAdHoc = Self.readIsSignedAdHoc()
+        if isSignedAdHoc {
+            KKitLog.logger("permissions").warning("KKit is signed ad-hoc: macOS forgets its permissions on every rebuild. Set a team in Config/Local.xcconfig.")
+        }
         refresh()
         startObserving()
     }
@@ -106,6 +112,25 @@ public final class SystemPermissionsService: PermissionsService {
     }
 
     // MARK: Private
+
+    /// Reads KKit's own code signature. String keys stand in for
+    /// `kSecCodeInfoFlags` / `kSecCodeInfoTeamIdentifier` and the raw value for
+    /// `kSecCSSigningInformation`, so Swift 6 has no C globals to complain about.
+    private static func readIsSignedAdHoc() -> Bool {
+        var code: SecCode?
+        guard SecCodeCopySelf(SecCSFlags(), &code) == errSecSuccess, let code else { return false }
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(code, SecCSFlags(), &staticCode) == errSecSuccess, let staticCode else { return false }
+        var info: CFDictionary?
+        guard SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: 1 << 1), &info) == errSecSuccess,
+              let info = info as? [String: Any]
+        else { return false }
+        if let flags = (info["flags"] as? NSNumber)?.uint32Value,
+           flags & SecCodeSignatureFlags.adhoc.rawValue != 0 {
+            return true
+        }
+        return info["teamid"] == nil
+    }
 
     private func currentStatus(of permission: Permission) -> PermissionStatus {
         switch permission {

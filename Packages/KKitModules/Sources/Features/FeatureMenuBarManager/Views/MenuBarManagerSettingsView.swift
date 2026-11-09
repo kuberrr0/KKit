@@ -7,7 +7,6 @@ import SwiftUI
 /// Settings › Menu Bar Manager.
 struct MenuBarManagerSettingsView: View {
     let controller: MenuBarManagerController
-    let commandKeyAvailable: @MainActor () -> Bool
 
     @Setting(MenuBarManagerSettings.revealOn) private var revealOn
     @Setting(MenuBarManagerSettings.openStyle) private var openStyle
@@ -39,7 +38,7 @@ struct MenuBarManagerSettingsView: View {
                     }
                 }
                 Toggle(String(localized: "Show every icon while ⌘ is held over the menu bar"), isOn: $showAllWithCommand)
-                if showAllWithCommand, !commandKeyAvailable() {
+                if showAllWithCommand, !controller.hasAccessibility {
                     permissionRow(
                         String(localized: "Holding ⌘ needs Accessibility."),
                         action: controller.requestAccessibility
@@ -52,7 +51,7 @@ struct MenuBarManagerSettingsView: View {
                 String(localized: "Icons"),
                 footer: String(localized: "Drag icons between the lists, or use an icon's ⋯ menu. KKit moves them with a ⌘-drag of its own, so the pointer may jump for a moment.")
             ) {
-                if !controller.service.isTrusted {
+                if !controller.hasAccessibility {
                     permissionRow(
                         String(localized: "Allow Accessibility to list and open menu bar icons."),
                         action: controller.requestAccessibility
@@ -146,6 +145,11 @@ struct MenuBarManagerSettingsView: View {
         .task {
             spacing = controller.service.iconSpacing
             await controller.refreshIcons()
+        }
+        .onChange(of: controller.hasAccessibility) { _, granted in
+            if granted {
+                Task { await controller.refreshIcons() }
+            }
         }
     }
 

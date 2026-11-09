@@ -18,4 +18,14 @@ public protocol PermissionsService: PermissionStatusProviding {
 
     /// Called after any status changes. The app uses it to start waiting features.
     var onChange: (@MainActor () -> Void)? { get set }
+
+    /// True when this copy of KKit is signed ad-hoc (no team). macOS ties a grant to
+    /// the exact build then, so every rebuild loses Accessibility, Input Monitoring
+    /// and Screen Recording, and System Settings can show a switch that's on for an
+    /// older build. Settings › Permissions warns about it.
+    var isSignedAdHoc: Bool { get }
+}
+
+public extension PermissionsService {
+    var isSignedAdHoc: Bool { false }
 }

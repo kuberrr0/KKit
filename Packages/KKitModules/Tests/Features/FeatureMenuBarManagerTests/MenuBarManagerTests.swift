@@ -32,6 +32,15 @@ struct MenuBarManagerTests {
         return (controller, settings)
     }
 
+    @Test func accessibilityComesFromThePermissionsService() {
+        let env = TestEnvironment()
+        let (controller, _) = make(env)
+        env.permissions.statuses[.accessibility] = .denied
+        #expect(!controller.hasAccessibility)
+        env.permissions.statuses[.accessibility] = .granted
+        #expect(controller.hasAccessibility)
+    }
+
     @Test func startPutsTheDividersInAndStopTakesThemOut() async {
         let env = TestEnvironment()
         let (controller, settings) = make(env)

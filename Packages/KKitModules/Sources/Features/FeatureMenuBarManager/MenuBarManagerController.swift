@@ -303,6 +303,12 @@ final class MenuBarManagerController: MenuBarIconsServicing {
         permissions.status(of: .screenRecording).isGranted
     }
 
+    /// Views read this rather than `service.isTrusted`: the permissions service is
+    /// observable, so a grant made while Settings is open shows up straight away.
+    var hasAccessibility: Bool {
+        permissions.status(of: .accessibility).isGranted
+    }
+
     private func captureMissingImages() async {
         guard settings[MenuBarManagerSettings.showsIconImages], canTakePictures else { return }
         let wanted = icons.filter { $0.isOnScreen && $0.windowID != nil && images[$0.id] == nil }.prefix(40)
@@ -389,7 +395,7 @@ final class MenuBarManagerController: MenuBarIconsServicing {
 
     /// Under the menu bar, its right edge under the chevron.
     func dropDownFrame(on screen: ScreenInfo) -> CGRect {
-        let size = DropDownBarView.size(for: dropDownGroups.map(\.count), hasMessage: dropDownGroups.isEmpty || !service.isTrusted)
+        let size = DropDownBarView.size(for: dropDownGroups.map(\.count), hasMessage: dropDownGroups.isEmpty || !hasAccessibility)
         let anchorX = service.chevronFrame?.maxX ?? (screen.frame.maxX - 200)
         let maxX = min(anchorX + 8, screen.frame.maxX - 8)
         let x = max(screen.frame.minX + 8, maxX - size.width)

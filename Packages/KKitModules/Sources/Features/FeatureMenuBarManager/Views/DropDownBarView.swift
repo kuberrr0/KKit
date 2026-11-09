@@ -34,7 +34,7 @@ struct DropDownBarView: View {
     @ViewBuilder
     private var content: some View {
         let groups = controller.dropDownGroups
-        if !controller.service.isTrusted {
+        if !controller.hasAccessibility {
             HStack(spacing: KKSpacing.s) {
                 Image(systemName: "accessibility")
                     .foregroundStyle(.secondary)

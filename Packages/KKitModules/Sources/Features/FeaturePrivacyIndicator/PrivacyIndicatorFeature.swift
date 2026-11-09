@@ -149,7 +149,11 @@ public final class PrivacyIndicatorFeature: Feature {
             activity = nil
             return
         }
-        let tapToggles = settings[PrivacySettings.clickTogglesMute] && indicator.micInUse
+        var onTap: (@MainActor () -> Void)?
+        if settings[PrivacySettings.clickTogglesMute] && indicator.micInUse {
+            onTap = { [weak self] in self?.toggleMute() }
+        }
+        let expanded = PrivacyIslandView(model: model) { [weak self] in self?.toggleMute() }
         let island = IslandActivity(
             id: "inUse",
             title: String(localized: "Mic & Camera"),
@@ -157,8 +161,8 @@ public final class PrivacyIndicatorFeature: Feature {
             priority: .high,
             compactLeading: AnyView(PrivacyCompactLeading(indicator: indicator)),
             compactTrailing: AnyView(PrivacyCompactTrailing(indicator: indicator)),
-            expanded: AnyView(PrivacyIslandView(model: model) { [weak self] in self?.toggleMute() }),
-            onTap: tapToggles ? { [weak self] in self?.toggleMute() } : nil
+            expanded: AnyView(expanded),
+            onTap: onTap
         )
         if let activity, activity.isActive {
             activity.update(island)

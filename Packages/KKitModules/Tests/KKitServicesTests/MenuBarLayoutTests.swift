@@ -67,7 +67,8 @@ struct MenuBarLayoutTests {
         #expect(shown == CGPoint(x: Self.chevron.midX, y: 970))
         let hidden = try #require(layout.dropPoint(for: .hidden, y: 970))
         // Halfway between the dividers.
-        #expect(hidden.x == (1012 + 1078) / 2)
+        let halfway: CGFloat = (1012 + 1078) / 2
+        #expect(hidden.x == halfway)
         let alwaysHidden = try #require(layout.dropPoint(for: .alwaysHidden, y: 970))
         #expect(alwaysHidden.x < 1000)
         var noAlwaysHidden = layout

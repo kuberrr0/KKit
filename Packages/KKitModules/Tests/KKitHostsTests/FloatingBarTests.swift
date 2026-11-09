@@ -117,10 +117,13 @@ struct FloatingBarHistoryTests {
         let custom = SearchResult(id: "c", title: "C", icon: .symbol("circle"), score: 1, kind: .custom)
         history.recordRun(custom, query: "c")
         #expect(history.recents.isEmpty)
-        #expect(!history.toggleFavourite(custom))
-        #expect(history.toggleFavourite(result("t", "T")))
+        let customStarred = history.toggleFavourite(custom)
+        #expect(!customStarred)
+        let starred = history.toggleFavourite(result("t", "T"))
+        #expect(starred)
         #expect(history.isFavourite("t"))
-        #expect(!history.toggleFavourite(result("t", "T")))
+        let unstarred = history.toggleFavourite(result("t", "T"))
+        #expect(!unstarred)
     }
 
     @Test func roundTripsThroughJSON() throws {

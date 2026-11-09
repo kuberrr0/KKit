@@ -35,18 +35,24 @@ struct VolumeMathTests {
 struct ScrollAccumulatorTests {
     @Test func mouseWheelNotchIsOneStep() {
         var scroll = ScrollAccumulator()
-        #expect(scroll.steps(for: IslandScrollEvent(deltaY: 3, deltaX: 0, isPrecise: false, isFine: false)) == 1)
-        #expect(scroll.steps(for: IslandScrollEvent(deltaY: -1, deltaX: 0, isPrecise: false, isFine: false)) == -1)
+        let result1 = scroll.steps(for: IslandScrollEvent(deltaY: 3, deltaX: 0, isPrecise: false, isFine: false))
+        #expect(result1 == 1)
+        let result2 = scroll.steps(for: IslandScrollEvent(deltaY: -1, deltaX: 0, isPrecise: false, isFine: false))
+        #expect(result2 == -1)
     }
 
     @Test func trackpadAccumulates() {
         var scroll = ScrollAccumulator(threshold: 10)
         let small = IslandScrollEvent(deltaY: 4, deltaX: 0, isPrecise: true, isFine: false)
-        #expect(scroll.steps(for: small) == 0)
-        #expect(scroll.steps(for: small) == 0)
-        #expect(scroll.steps(for: small) == 1)
+        let result3 = scroll.steps(for: small)
+        #expect(result3 == 0)
+        let result4 = scroll.steps(for: small)
+        #expect(result4 == 0)
+        let result5 = scroll.steps(for: small)
+        #expect(result5 == 1)
         // Reversing direction drops what was left over.
-        #expect(scroll.steps(for: IslandScrollEvent(deltaY: -25, deltaX: 0, isPrecise: true, isFine: false)) == -2)
+        let result6 = scroll.steps(for: IslandScrollEvent(deltaY: -25, deltaX: 0, isPrecise: true, isFine: false))
+        #expect(result6 == -2)
     }
 }
 

@@ -11,12 +11,14 @@ struct UsageLogTests {
 
     @Test func opensAndClosesEntries() {
         var log = UsageLog()
-        #expect(!log.record(DeviceUsage(micInUse: true, micUsers: [zoom]), at: start))
+        let result1 = log.record(DeviceUsage(micInUse: true, micUsers: [zoom]), at: start)
+        #expect(!result1)
         #expect(log.entries.count == 1)
         #expect(log.entries[0].apps == ["zoom.us"])
 
         let later = start.addingTimeInterval(600)
-        #expect(log.record(.idle, at: later))
+        let result2 = log.record(.idle, at: later)
+        #expect(result2)
         #expect(log.entries[0].end == later)
         #expect(log.entries[0].duration == 600)
     }

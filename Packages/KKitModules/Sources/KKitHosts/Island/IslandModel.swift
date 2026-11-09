@@ -32,6 +32,11 @@ public final class IslandModel {
     public var expandedDisplay: UInt32?
     /// The selected page in the expanded Island.
     public var selectedPageID: String?
+    /// The display whose Island shows the drop area, while something is dragged near
+    /// the notch or over the Island.
+    public var dropDisplay: UInt32?
+    /// The drop zone under the cursor (`IslandDropZoneItem.id`).
+    public var hoveredDropZone: String?
 
     private var sequence = 0
 
@@ -88,6 +93,12 @@ public final class IslandModel {
         entries.contains { $0.token == token }
     }
 
+    /// Whether the Island is expanded on this activity's page.
+    public func isExpanded(token: UUID) -> Bool {
+        guard expandedDisplay != nil, let entry = entries.first(where: { $0.token == token }) else { return false }
+        return selectedPageID == IslandPageItem.activityPageID(entry)
+    }
+
     /// Activities in display order: highest priority first, newest first among equals.
     public var orderedEntries: [Entry] {
         entries.sorted {
@@ -129,6 +140,17 @@ public final class IslandModel {
 
     public func collapse() {
         expandedDisplay = nil
+    }
+
+    // MARK: Drop area
+
+    public func showDropArea(on display: UInt32) {
+        dropDisplay = display
+    }
+
+    public func hideDropArea() {
+        dropDisplay = nil
+        hoveredDropZone = nil
     }
 
     private func repairSelection() {
@@ -173,5 +195,38 @@ public struct IslandPageItem: Identifiable {
 
     static func activityPageID(_ entry: IslandModel.Entry) -> String {
         activityPrefix + entry.id
+    }
+
+    static func activityPageID(owner: FeatureID, activityID: String) -> String {
+        activityPrefix + IslandModel.key(owner: owner, id: activityID)
+    }
+
+    static func pageID(owner: FeatureID, pageID: String) -> String {
+        pagePrefix + IslandModel.key(owner: owner, id: pageID)
+    }
+}
+
+/// A drop zone in the Island's drop area, with its owner.
+public struct IslandDropZoneItem: Identifiable {
+    public let owner: FeatureID
+    public let zone: IslandDropZone
+
+    public var id: String { IslandModel.key(owner: owner, id: zone.id) }
+
+    /// Running features' zones, in order.
+    @MainActor
+    public static func collect(from features: [any Feature]) -> [IslandDropZoneItem] {
+        features
+            .flatMap { feature in
+                feature.islandDropZones.map { IslandDropZoneItem(owner: type(of: feature).manifest.id, zone: $0) }
+            }
+            .sorted { $0.zone.order < $1.zone.order }
+    }
+
+    /// Which of `count` equal-width zones the point `x` (0…`width`) is over.
+    public static func index(at x: CGFloat, width: CGFloat, count: Int) -> Int? {
+        guard count > 0, width > 0 else { return nil }
+        let index = Int((x / width) * CGFloat(count))
+        return min(max(index, 0), count - 1)
     }
 }

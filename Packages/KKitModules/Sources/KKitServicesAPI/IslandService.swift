@@ -127,6 +127,8 @@ public struct IslandScrollEvent: Sendable, Equatable {
 public protocol IslandHandle: AnyObject {
     /// `false` once dismissed (by the feature, by its lifetime, or because the feature stopped).
     var isActive: Bool { get }
+    /// The Island is expanded and showing this activity's page.
+    var isExpanded: Bool { get }
     func update(_ activity: IslandActivity)
     func dismiss()
 }
@@ -141,6 +143,9 @@ public protocol IslandService: AnyObject {
     func dismissAll(owner: FeatureID)
     /// One handler per feature; `nil` removes it. The newest handler gets scrolls.
     func setScrollHandler(_ handler: (@MainActor (IslandScrollEvent) -> Void)?, owner: FeatureID)
+    /// Expands the Island on one of `owner`'s pages (`IslandPage.id`), or on an
+    /// activity's page when `activityID` names one of `owner`'s activities.
+    func expand(page: String?, activityID: String?, owner: FeatureID)
 }
 
 /// A feature's handle on the Island (`context.island`).
@@ -169,5 +174,15 @@ public struct FeatureIsland {
 
     public func setScrollHandler(_ handler: (@MainActor (IslandScrollEvent) -> Void)?) {
         service.setScrollHandler(handler, owner: owner)
+    }
+
+    /// Opens the Island on one of this feature's pages.
+    public func showPage(_ pageID: String) {
+        service.expand(page: pageID, activityID: nil, owner: owner)
+    }
+
+    /// Opens the Island on one of this feature's activities.
+    public func showActivity(_ activityID: String) {
+        service.expand(page: nil, activityID: activityID, owner: owner)
     }
 }

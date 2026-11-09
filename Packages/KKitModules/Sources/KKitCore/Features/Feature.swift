@@ -42,6 +42,8 @@ public protocol Feature: AnyObject {
     var resultActions: [ResultAction] { get }
     /// Views that take over the Floating Bar (Quick Note's editor).
     var floatingBarModes: [FloatingBarMode] { get }
+    /// Targets in the Island's drop area (Shelf, AirDrop, Quick Note).
+    var islandDropZones: [IslandDropZone] { get }
 }
 
 public extension Feature {
@@ -54,6 +56,7 @@ public extension Feature {
     var searchProviders: [any SearchProvider] { [] }
     var resultActions: [ResultAction] { [] }
     var floatingBarModes: [FloatingBarMode] { [] }
+    var islandDropZones: [IslandDropZone] { [] }
 
     var manifest: FeatureManifest { Self.manifest }
 }

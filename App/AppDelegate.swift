@@ -53,6 +53,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         services.register((any LocationService).self, CoreLocationService())
         // M2: Spotlight file search for the Floating Bar's file provider.
         services.register((any FileSearchService).self, SpotlightFileSearchService())
+        // M3: the clipboard (polled only while Clipboard History listens) and ScreenCaptureKit.
+        services.register((any PasteboardService).self, NSPasteboardService())
+        services.register((any ScreenCaptureService).self, ScreenCaptureKitService())
         workspaceEvents = WorkspaceEventsPublisher(events: events)
 
         let features = FeatureManager(

@@ -1,9 +1,12 @@
 import FeatureCalculator
+import FeatureClipboard
 import FeatureNightShift
 import FeaturePower
 import FeaturePrivacyIndicator
 import FeatureQuickNote
+import FeatureScreenTools
 import FeatureSearch
+import FeatureShelf
 import FeatureStats
 import FeatureTimer
 import FeatureToggles
@@ -25,5 +28,8 @@ enum FeatureCatalog {
         SearchFeature.self,
         CalculatorFeature.self,
         QuickNoteFeature.self,
+        ClipboardFeature.self,
+        ScreenToolsFeature.self,
+        ShelfFeature.self,
     ]
 }

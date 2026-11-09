@@ -58,10 +58,14 @@ public final class FileStorageService: StorageService {
         try FileManager.default.removeItem(at: url)
     }
 
-    private func fileURL(named name: String, for feature: FeatureID) throws -> URL {
+    public func openDatabase(named name: String, for feature: FeatureID) throws -> any Database {
+        try SQLiteDatabase(url: fileURL(named: name, extension: "sqlite", for: feature))
+    }
+
+    private func fileURL(named name: String, extension ext: String = "json", for feature: FeatureID) throws -> URL {
         guard !name.isEmpty, !name.contains("/"), !name.hasPrefix(".") else {
             throw StorageError.invalidName(name)
         }
-        return try directory(for: feature).appendingPathComponent("\(name).json", isDirectory: false)
+        return try directory(for: feature).appendingPathComponent("\(name).\(ext)", isDirectory: false)
     }
 }

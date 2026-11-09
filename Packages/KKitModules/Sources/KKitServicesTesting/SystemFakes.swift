@@ -11,6 +11,7 @@ public final class FakeIslandService: IslandService {
         public private(set) var activity: IslandActivity
         public let owner: FeatureID
         public private(set) var isActive = true
+        public var isExpanded = false
         weak var service: FakeIslandService?
 
         init(activity: IslandActivity, owner: FeatureID, service: FakeIslandService) {
@@ -33,6 +34,7 @@ public final class FakeIslandService: IslandService {
     public private(set) var handles: [Handle] = []
     public private(set) var huds: [IslandHUD] = []
     public private(set) var scrollHandlers: [FeatureID: @MainActor (IslandScrollEvent) -> Void] = [:]
+    public private(set) var expansions: [(owner: FeatureID, page: String?, activity: String?)] = []
 
     public init() {}
 
@@ -61,6 +63,10 @@ public final class FakeIslandService: IslandService {
 
     public func setScrollHandler(_ handler: (@MainActor (IslandScrollEvent) -> Void)?, owner: FeatureID) {
         scrollHandlers[owner] = handler
+    }
+
+    public func expand(page: String?, activityID: String?, owner: FeatureID) {
+        expansions.append((owner, page, activityID))
     }
 
     /// Simulates scrolling over the Island.

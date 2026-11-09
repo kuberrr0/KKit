@@ -3,6 +3,7 @@ import KKitCore
 import KKitServicesAPI
 import KKitUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// The Island: a black panel drawn over the notch that grows "ears" for live
 /// activities, shows HUDs, and expands into pages on hover or click. On screens
@@ -23,6 +24,14 @@ public final class IslandHost: IslandService {
     private var hoverTask: Task<Void, Never>?
     private var tasks: [Task<Void, Never>] = []
     private var horizontalScroll: CGFloat = 0
+    private var hovering: Set<UInt32> = []
+    private var autoCollapseTask: Task<Void, Never>?
+    /// Where each panel's notch is, for spotting drags heading toward it.
+    private var notchAnchors: [UInt32: (screen: CGRect, centerX: CGFloat)] = [:]
+    private var dragMonitors: [Any] = []
+    private var dragStartCount = 0
+    private var dropHideTask: Task<Void, Never>?
+    private var isOverDropArea = false
 
     public init(dependencies: HostDependencies, events: EventBus) {
         self.dependencies = dependencies
@@ -65,6 +74,37 @@ public final class IslandHost: IslandService {
         }
     }
 
+    public func expand(page: String?, activityID: String?, owner: FeatureID) {
+        let pageID: String?
+        if let activityID {
+            pageID = IslandPageItem.activityPageID(owner: owner, activityID: activityID)
+        } else if let page {
+            pageID = IslandPageItem.pageID(owner: owner, pageID: page)
+        } else {
+            pageID = nil
+        }
+        guard let display = displayForExpansion() else { return }
+        expand(on: display, page: pageID)
+        // Opened without the pointer: close again unless the user moves onto it.
+        autoCollapseTask?.cancel()
+        autoCollapseTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled, let self, !self.hovering.contains(display) else { return }
+            if self.model.expandedDisplay == display {
+                self.model.collapse()
+            }
+        }
+    }
+
+    /// The panel on the screen with the pointer, or the first one.
+    private func displayForExpansion() -> UInt32? {
+        let mouse = NSEvent.mouseLocation
+        if let match = notchAnchors.first(where: { $0.value.screen.contains(mouse) }) {
+            return match.key
+        }
+        return panels.keys.sorted().first
+    }
+
     // MARK: Handles
 
     @MainActor
@@ -81,6 +121,10 @@ public final class IslandHost: IslandService {
 
         var isActive: Bool {
             host?.model.contains(token: token) ?? false
+        }
+
+        var isExpanded: Bool {
+            host?.model.isExpanded(token: token) ?? false
         }
 
         func update(_ activity: IslandActivity) {
@@ -108,6 +152,7 @@ public final class IslandHost: IslandService {
                         self.model.removeAll(owner: id)
                         self.scrollHandlers.removeAll { $0.owner == id }
                     }
+                    self.updateDragMonitor()
                 case .displaysChanged:
                     self.rebuildPanels()
                 default:
@@ -119,6 +164,12 @@ public final class IslandHost: IslandService {
         tasks.append(Task { [weak self] in
             for await _ in displays {
                 self?.rebuildPanels()
+            }
+        })
+        let enabled = settings.changes(of: IslandSettings.enabled)
+        tasks.append(Task { [weak self] in
+            for await _ in enabled {
+                self?.updateDragMonitor()
             }
         })
         let fullScreen = settings.changes(of: IslandSettings.showInFullScreen)
@@ -152,9 +203,11 @@ public final class IslandHost: IslandService {
         if let expanded = model.expandedDisplay, !wanted.contains(expanded) {
             model.collapse()
         }
+        notchAnchors = [:]
         for screen in screens {
             let geometry = Self.geometry(for: screen)
             let frame = Self.panelFrame(for: screen, geometry: geometry)
+            notchAnchors[geometry.displayID] = (screen.frame, frame.midX)
             if let panel = panels[geometry.displayID] {
                 panel.update(geometry: geometry, frame: frame, rootView: rootView(for: geometry))
             } else {
@@ -223,10 +276,15 @@ public final class IslandHost: IslandService {
             geometry: geometry,
             isEnabled: { [settings] in settings[IslandSettings.enabled] },
             pages: { [weak self] in self?.pages() ?? [] },
+            dropZones: { [weak self] in self?.dropZones() ?? [] },
             actions: IslandViewActions(
                 hoverChanged: { [weak self] hovering in self?.hoverChanged(hovering, display: geometry.displayID) },
                 tapped: { [weak self] entry in self?.tapped(entry, display: geometry.displayID) },
-                selectPage: { [weak self] page in self?.model.selectedPageID = page }
+                selectPage: { [weak self] page in self?.model.selectedPageID = page },
+                dropEntered: { [weak self] in self?.dropEntered(display: geometry.displayID) },
+                dropExited: { [weak self] in self?.dropExited(display: geometry.displayID) },
+                dropHovered: { [weak self] zone in self?.model.hoveredDropZone = zone },
+                drop: { [weak self] zone, providers in self?.drop(providers, on: zone) }
             )
         )
     }
@@ -243,6 +301,11 @@ public final class IslandHost: IslandService {
     // MARK: Interaction
 
     private func hoverChanged(_ hovering: Bool, display: UInt32) {
+        if hovering {
+            self.hovering.insert(display)
+        } else {
+            self.hovering.remove(display)
+        }
         hoverTask?.cancel()
         if hovering {
             guard settings[IslandSettings.expandOnHover], model.expandedDisplay != display else { return }
@@ -284,6 +347,158 @@ public final class IslandHost: IslandService {
             selected = available.first?.id
         }
         model.expand(on: display, page: selected)
+    }
+
+    // MARK: Drop area
+
+    func dropZones() -> [IslandDropZoneItem] {
+        IslandDropZoneItem.collect(from: dependencies.features.runningFeatures)
+    }
+
+    /// Watches mouse drags (no permission needed) only while some feature has a drop
+    /// zone, and opens the drop area when a drag with content nears a notch.
+    private func updateDragMonitor() {
+        let wanted = !dropZones().isEmpty && settings[IslandSettings.enabled]
+        if wanted, dragMonitors.isEmpty {
+            let mask: NSEvent.EventTypeMask = [.leftMouseDown, .leftMouseDragged, .leftMouseUp]
+            if let global = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: { [weak self] event in
+                let type = event.type
+                MainActor.assumeIsolated { self?.handleDrag(type) }
+            }) {
+                dragMonitors.append(global)
+            }
+            if let local = NSEvent.addLocalMonitorForEvents(matching: mask, handler: { [weak self] event in
+                let type = event.type
+                MainActor.assumeIsolated { self?.handleDrag(type) }
+                return event
+            }) {
+                dragMonitors.append(local)
+            }
+        } else if !wanted, !dragMonitors.isEmpty {
+            dragMonitors.forEach(NSEvent.removeMonitor)
+            dragMonitors = []
+            model.hideDropArea()
+        }
+    }
+
+    private func handleDrag(_ type: NSEvent.EventType) {
+        switch type {
+        case .leftMouseDown:
+            dragStartCount = NSPasteboard(name: .drag).changeCount
+        case .leftMouseDragged:
+            // A real drag-and-drop puts something on the drag pasteboard.
+            guard NSPasteboard(name: .drag).changeCount != dragStartCount else { return }
+            let mouse = NSEvent.mouseLocation
+            let near = notchAnchors.first { _, anchor in
+                anchor.screen.contains(mouse)
+                    && mouse.y > anchor.screen.maxY - 150
+                    && abs(mouse.x - anchor.centerX) < 320
+            }
+            if let near {
+                dropHideTask?.cancel()
+                if model.dropDisplay != near.key {
+                    model.showDropArea(on: near.key)
+                }
+            } else if model.dropDisplay != nil, !isOverDropArea {
+                scheduleDropAreaHide(after: .milliseconds(250))
+            }
+        case .leftMouseUp:
+            if model.dropDisplay != nil {
+                scheduleDropAreaHide(after: .milliseconds(400))
+            }
+        default:
+            break
+        }
+    }
+
+    private func dropEntered(display: UInt32) {
+        isOverDropArea = true
+        dropHideTask?.cancel()
+        if model.dropDisplay != display {
+            model.showDropArea(on: display)
+        }
+    }
+
+    private func dropExited(display: UInt32) {
+        isOverDropArea = false
+        model.hoveredDropZone = nil
+        scheduleDropAreaHide(after: .milliseconds(300))
+    }
+
+    private func scheduleDropAreaHide(after delay: Duration) {
+        dropHideTask?.cancel()
+        dropHideTask = Task { [weak self] in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled, let self, !self.isOverDropArea else { return }
+            self.model.hideDropArea()
+        }
+    }
+
+    private func drop(_ providers: [NSItemProvider], on zoneID: String?) {
+        isOverDropArea = false
+        let zones = dropZones()
+        let target = zones.first { $0.id == zoneID } ?? zones.first
+        model.hideDropArea()
+        guard let target else { return }
+        Task { [weak self] in
+            let items = await Self.load(providers)
+            let accepted = target.zone.accepted(items)
+            guard !accepted.isEmpty else {
+                self?.showHUD(
+                    IslandHUD(id: "island.drop", symbol: "nosign", title: String(localized: "\(target.zone.title) can't take that"), tint: .warning),
+                    owner: IslandSettings.owner
+                )
+                return
+            }
+            await target.zone.perform(accepted)
+        }
+    }
+
+    /// The types the drop area takes, most specific first.
+    static let dropTypes: [UTType] = [.fileURL, .url, .image, .plainText]
+
+    static func load(_ providers: [NSItemProvider]) async -> [DroppedItem] {
+        var items: [DroppedItem] = []
+        for provider in providers {
+            if let item = await load(provider) {
+                items.append(item)
+            }
+        }
+        return items
+    }
+
+    private static func load(_ provider: NSItemProvider) async -> DroppedItem? {
+        if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier),
+           let data = await data(from: provider, type: UTType.fileURL.identifier),
+           let url = URL(dataRepresentation: data, relativeTo: nil) {
+            // Finder sends file reference URLs (file:///.file/id=…).
+            return .file((url as NSURL).filePathURL ?? url)
+        }
+        if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier),
+           let data = await data(from: provider, type: UTType.url.identifier),
+           let url = URL(dataRepresentation: data, relativeTo: nil) {
+            return url.isFileURL ? .file(url) : .url(url)
+        }
+        for type in [UTType.png, .tiff, .jpeg, .heic, .image] where provider.hasItemConformingToTypeIdentifier(type.identifier) {
+            if let data = await data(from: provider, type: type.identifier) {
+                return .image(data, type: type == .image ? UTType.tiff.identifier : type.identifier)
+            }
+        }
+        for type in [UTType.utf8PlainText, .plainText] where provider.hasItemConformingToTypeIdentifier(type.identifier) {
+            if let data = await data(from: provider, type: type.identifier),
+               let text = String(data: data, encoding: .utf8), !text.isEmpty {
+                return .text(text)
+            }
+        }
+        return nil
+    }
+
+    private static func data(from provider: NSItemProvider, type: String) async -> Data? {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Data?, Never>) in
+            _ = provider.loadDataRepresentation(forTypeIdentifier: type) { data, _ in
+                continuation.resume(returning: data)
+            }
+        }
     }
 
     private func handleScroll(_ event: NSEvent, display: UInt32) {

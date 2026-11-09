@@ -64,4 +64,14 @@ public extension FeatureContext {
     var fileSearch: any FileSearchService {
         services.require((any FileSearchService).self)
     }
+
+    /// The general clipboard (M3).
+    var pasteboard: any PasteboardService {
+        services.require((any PasteboardService).self)
+    }
+
+    /// Screenshots and recordings (M3).
+    var screenCapture: any ScreenCaptureService {
+        services.require((any ScreenCaptureService).self)
+    }
 }

@@ -78,4 +78,10 @@ targets:
         product: FeatureCalculator
       - package: KKitModules
         product: FeatureQuickNote
+      - package: KKitModules
+        product: FeatureClipboard
+      - package: KKitModules
+        product: FeatureScreenTools
+      - package: KKitModules
+        product: FeatureShelf
     scheme: {}

@@ -2,6 +2,7 @@ import KKitCore
 import KKitServicesAPI
 import KKitUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Where an Island panel sits: notch size, or a virtual notch on screens without one.
 struct IslandGeometry: Equatable {
@@ -24,6 +25,8 @@ enum IslandMode: Hashable {
     case hud
     case banner
     case expanded
+    /// Something is being dragged to the Island: one zone per drop target.
+    case drop
 }
 
 /// Actions the panel's view sends back to the host.
@@ -32,6 +35,10 @@ struct IslandViewActions {
     var hoverChanged: @MainActor (Bool) -> Void
     var tapped: @MainActor (IslandModel.Entry?) -> Void
     var selectPage: @MainActor (String) -> Void
+    var dropEntered: @MainActor () -> Void
+    var dropExited: @MainActor () -> Void
+    var dropHovered: @MainActor (String?) -> Void
+    var drop: @MainActor (String?, [NSItemProvider]) -> Void
 }
 
 /// The black shape and its content, top-centred in the Island panel.
@@ -40,6 +47,7 @@ struct IslandRootView: View {
     let geometry: IslandGeometry
     let isEnabled: @MainActor () -> Bool
     let pages: @MainActor () -> [IslandPageItem]
+    let dropZones: @MainActor () -> [IslandDropZoneItem]
     let actions: IslandViewActions
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -49,13 +57,15 @@ struct IslandRootView: View {
     static let bannerExtra: CGFloat = 30
     static let expandedContentHeight: CGFloat = 168
     static let expandedMinWidth: CGFloat = 480
+    static let dropHeight: CGFloat = 96
 
     var body: some View {
         let pages = self.pages()
-        let mode = mode(pages: pages)
+        let zones = dropZones()
+        let mode = mode(pages: pages, zones: zones)
         let size = size(for: mode)
         VStack(spacing: 0) {
-            island(mode: mode, size: size, pages: pages)
+            island(mode: mode, size: size, pages: pages, zones: zones)
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -64,8 +74,11 @@ struct IslandRootView: View {
 
     // MARK: Mode and size
 
-    private func mode(pages: [IslandPageItem]) -> IslandMode {
+    private func mode(pages: [IslandPageItem], zones: [IslandDropZoneItem]) -> IslandMode {
         guard isEnabled() else { return geometry.hasNotch ? .idle : .hidden }
+        if model.dropDisplay == geometry.displayID, !zones.isEmpty {
+            return .drop
+        }
         if model.expandedDisplay == geometry.displayID, !pages.isEmpty {
             return .expanded
         }
@@ -98,17 +111,28 @@ struct IslandRootView: View {
                 width: max(center + 2 * 150, Self.expandedMinWidth) + shoulders,
                 height: height + Self.expandedContentHeight
             )
+        case .drop:
+            return CGSize(
+                width: max(center + 2 * 150, Self.expandedMinWidth) + shoulders,
+                height: height + Self.dropHeight
+            )
         }
+    }
+
+    /// The width the drop zones share, inside the padding.
+    private func dropContentWidth(_ size: CGSize) -> CGFloat {
+        size.width - 2 * geometry.shoulder - 2 * KKSpacing.l
     }
 
     // MARK: Island
 
-    private func island(mode: IslandMode, size: CGSize, pages: [IslandPageItem]) -> some View {
-        let radius: CGFloat = mode == .expanded ? 26 : (mode == .banner ? 18 : min(geometry.barHeight / 2, 12))
+    private func island(mode: IslandMode, size: CGSize, pages: [IslandPageItem], zones: [IslandDropZoneItem]) -> some View {
+        let radius: CGFloat = (mode == .expanded || mode == .drop) ? 26 : (mode == .banner ? 18 : min(geometry.barHeight / 2, 12))
         let shape = IslandShape(bottomRadius: radius, shoulder: geometry.shoulder)
+        let dropSize = self.size(for: .drop)
         return ZStack(alignment: .top) {
             Color.black
-            content(mode: mode, size: size, pages: pages)
+            content(mode: mode, size: size, pages: pages, zones: zones)
                 .padding(.horizontal, geometry.shoulder)
                 .transition(.opacity)
                 .id(mode)
@@ -116,6 +140,12 @@ struct IslandRootView: View {
         .frame(width: size.width, height: size.height)
         .clipShape(shape)
         .contentShape(shape)
+        .onDrop(of: IslandHost.dropTypes, delegate: IslandDropDelegate(
+            zones: zones.map(\.id),
+            leading: (size.width - dropSize.width) / 2 + geometry.shoulder + KKSpacing.l,
+            width: dropContentWidth(dropSize),
+            actions: actions
+        ))
         .shadow(color: .black.opacity(mode == .expanded ? 0.45 : 0), radius: 12, y: 6)
         .opacity(mode == .hidden ? 0 : 1)
         .onHover { actions.hoverChanged($0) }
@@ -131,8 +161,15 @@ struct IslandRootView: View {
     }
 
     @ViewBuilder
-    private func content(mode: IslandMode, size: CGSize, pages: [IslandPageItem]) -> some View {
+    private func content(mode: IslandMode, size: CGSize, pages: [IslandPageItem], zones: [IslandDropZoneItem]) -> some View {
         switch mode {
+        case .drop:
+            IslandDropAreaView(
+                zones: zones,
+                hovered: model.hoveredDropZone,
+                barHeight: geometry.barHeight,
+                centerWidth: geometry.centerWidth
+            )
         case .hidden, .idle:
             Color.clear
         case .compact:
@@ -190,6 +227,97 @@ struct IslandRootView: View {
         .foregroundStyle(.white)
         .lineLimit(1)
         .frame(height: geometry.barHeight)
+    }
+}
+
+/// Hands drags over the Island to the host, and works out which zone is under the
+/// cursor from its position (zones share the width equally).
+struct IslandDropDelegate: DropDelegate {
+    let zones: [String]
+    /// Where the zones start, from the Island's left edge.
+    let leading: CGFloat
+    let width: CGFloat
+    let actions: IslandViewActions
+
+    private func zone(at location: CGPoint) -> String? {
+        guard let index = IslandDropZoneItem.index(at: location.x - leading, width: width, count: zones.count) else {
+            return nil
+        }
+        return zones[index]
+    }
+
+    func validateDrop(info: DropInfo) -> Bool {
+        !zones.isEmpty && info.hasItemsConforming(to: IslandHost.dropTypes)
+    }
+
+    func dropEntered(info: DropInfo) {
+        actions.dropEntered()
+        actions.dropHovered(zone(at: info.location))
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        actions.dropHovered(zone(at: info.location))
+        return DropProposal(operation: .copy)
+    }
+
+    func dropExited(info: DropInfo) {
+        actions.dropExited()
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        let providers = info.itemProviders(for: IslandHost.dropTypes)
+        guard !providers.isEmpty else { return false }
+        actions.drop(zone(at: info.location), providers)
+        return true
+    }
+}
+
+/// The drop area: one tile per zone, the one under the cursor lit up.
+struct IslandDropAreaView: View {
+    let zones: [IslandDropZoneItem]
+    let hovered: String?
+    let barHeight: CGFloat
+    let centerWidth: CGFloat
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Drop to…")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+                Spacer(minLength: centerWidth)
+            }
+            .padding(.horizontal, KKSpacing.l)
+            .frame(height: barHeight)
+            HStack(spacing: KKSpacing.s) {
+                ForEach(zones) { item in
+                    let isHovered = item.id == hovered
+                    VStack(spacing: KKSpacing.xs) {
+                        Image(systemName: item.zone.symbol)
+                            .font(.system(size: 22, weight: .medium))
+                            .symbolRenderingMode(.hierarchical)
+                        Text(item.zone.title)
+                            .font(.system(size: 12, weight: .semibold))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(isHovered ? Color.black : Color.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: KKRadius.row, style: .continuous)
+                            .fill(isHovered ? Color.white : Color.white.opacity(0.1))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: KKRadius.row, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    )
+                    .animation(KKMotion.quick, value: isHovered)
+                    .accessibilityLabel(Text(item.zone.title))
+                }
+            }
+            .padding(.horizontal, KKSpacing.l)
+            .padding(.bottom, KKSpacing.m)
+            .padding(.top, KKSpacing.xs)
+        }
     }
 }
 

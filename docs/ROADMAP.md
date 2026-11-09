@@ -83,7 +83,31 @@ Done. Notes on what was built versus the plan below:
 - **Quick Note** (Obsidian targets, templates, editor mode)
 - URL scheme and the *Run KKit Command* App Intent
 
-## M3 — Capture & clipboard
+## M3 — Capture & clipboard ✅
+
+Done. Notes on what was built versus the plan below:
+
+- Storage gained SQLite: `StorageService.openDatabase` returns a `Database` backed by the
+  system `libsqlite3` (`SQLiteDatabase`, WAL, migrations by `user_version`) rather than
+  GRDB, so there's no new dependency. Clipboard search uses FTS5 with the trigram
+  tokenizer and falls back to `LIKE`.
+- New services: `PasteboardService` (`context.pasteboard`; polls `changeCount` every
+  0.4 s only while subscribed, marks KKit's own writes, ⌘V paste needs Accessibility) and
+  `ScreenCaptureService` (`context.screenCapture`; ScreenCaptureKit screenshots on 14.2,
+  recording on macOS 15 with `SCRecordingOutput`). `OverlayService.pickRegion` is the
+  shared area/window/screen picker. Shelf publishes `ShelfServicing`.
+- `Feature` gained `islandDropZones`: the Island watches the drag pasteboard and the
+  cursor, opens into one zone per feature (Shelf, AirDrop, Add to Note) and hands the
+  dropped files, links, text or image data to the zone. Island handles report
+  `isExpanded`, and features can open the Island on a page or activity
+  (`context.island.showPage/showActivity`), which collapses again after a few seconds
+  unless the pointer is on it.
+- New events: `AppEvent.clipboardChanged`, `AppEvent.screenshotCaptured(URL)`.
+- Calculator's ⌘↵ paste and Quick Note's selected-text context still wait (paste is
+  available now; selection needs the M4 Accessibility service).
+- Translation needs macOS 15 (Apple's on-device framework); on 14 the card says so.
+- Left for later: clipboard encryption at rest, screenshot annotation, GIF export and
+  keystroke overlay, multi-item drag-out and the mini shelf. See each feature's README.
 
 - **Clipboard History** (SQLite + FTS, picker panel, paste stack, snippets)
 - **Screen Tools** (screenshot, OCR, QR scan, translate, colour picker, recording)

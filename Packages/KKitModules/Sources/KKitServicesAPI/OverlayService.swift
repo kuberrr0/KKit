@@ -4,6 +4,8 @@ import SwiftUI
 
 /// How high a KKit panel floats.
 public enum OverlayLevel: Sendable, Hashable {
+    /// Just above the desktop icons, below every app window (hide desktop icons).
+    case aboveDesktopIcons
     /// Above normal windows (Floating Bar, pickers).
     case floating
     /// Level with the menu bar (Island).

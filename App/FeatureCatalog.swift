@@ -1,3 +1,10 @@
+import FeatureNightShift
+import FeaturePower
+import FeaturePrivacyIndicator
+import FeatureStats
+import FeatureTimer
+import FeatureToggles
+import FeatureVolume
 import KKitCore
 
 /// The one list of every feature type, in the order they appear in Settings.
@@ -5,6 +12,12 @@ import KKitCore
 enum FeatureCatalog {
     @MainActor
     static let all: [any Feature.Type] = [
-        // PowerFeature.self, VolumeFeature.self, …
+        VolumeFeature.self,
+        StatsFeature.self,
+        PowerFeature.self,
+        NightShiftFeature.self,
+        TogglesFeature.self,
+        PrivacyIndicatorFeature.self,
+        TimerFeature.self,
     ]
 }

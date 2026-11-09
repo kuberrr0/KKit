@@ -57,5 +57,19 @@ targets:
         product: KKitServices
       - package: KKitModules
         product: KKitHosts
-      # Features: add one line per feature target (ARCHITECTURE.md §11).
+      # Features: one entry per feature target (ARCHITECTURE.md §11).
+      - package: KKitModules
+        product: FeaturePower
+      - package: KKitModules
+        product: FeatureStats
+      - package: KKitModules
+        product: FeatureNightShift
+      - package: KKitModules
+        product: FeatureVolume
+      - package: KKitModules
+        product: FeaturePrivacyIndicator
+      - package: KKitModules
+        product: FeatureTimer
+      - package: KKitModules
+        product: FeatureToggles
     scheme: {}

@@ -10,6 +10,7 @@ public enum SettingsPage: Hashable, Sendable {
     case general
     case permissions
     case shortcuts
+    case island
     case feature(FeatureID)
 }
 
@@ -102,6 +103,8 @@ struct SettingsRootView: View {
                 .tag(SettingsPage.permissions)
                 Label(String(localized: "Shortcuts"), systemImage: "keyboard")
                     .tag(SettingsPage.shortcuts)
+                Label(String(localized: "Island"), systemImage: "capsule")
+                    .tag(SettingsPage.island)
             }
 
             Section(String(localized: "Features")) {
@@ -128,6 +131,9 @@ struct SettingsRootView: View {
             PermissionsSettingsView(dependencies: dependencies)
         case .shortcuts:
             ShortcutsSettingsView(dependencies: dependencies)
+        case .island:
+            IslandSettingsView()
+                .environment(\.featureSettings, FeatureSettings(featureID: IslandSettings.owner, store: dependencies.settings))
         case .feature(let id):
             if let manifest = dependencies.features.manifest(for: id) {
                 FeatureSettingsView(dependencies: dependencies, manifest: manifest)

@@ -14,7 +14,13 @@ let package = Package(
         .library(name: "KKitServices", targets: ["KKitServices"]),
         .library(name: "KKitServicesTesting", targets: ["KKitServicesTesting"]),
         .library(name: "KKitHosts", targets: ["KKitHosts"]),
-        // Features: add `.library(name: "Feature<Name>", targets: ["Feature<Name>"])`.
+        .library(name: "FeaturePower", targets: ["FeaturePower"]),
+        .library(name: "FeatureStats", targets: ["FeatureStats"]),
+        .library(name: "FeatureNightShift", targets: ["FeatureNightShift"]),
+        .library(name: "FeatureVolume", targets: ["FeatureVolume"]),
+        .library(name: "FeaturePrivacyIndicator", targets: ["FeaturePrivacyIndicator"]),
+        .library(name: "FeatureTimer", targets: ["FeatureTimer"]),
+        .library(name: "FeatureToggles", targets: ["FeatureToggles"]),
     ],
     dependencies: [
         // 2.x: 3.x needs swift-tools 6.2 (Xcode 26).
@@ -37,11 +43,13 @@ let package = Package(
         .target(name: "KKitHosts", dependencies: ["KKitCore", "KKitUI", "KKitServicesAPI"]),
 
         // ── Features (depend on KKitCore, KKitUI, KKitServicesAPI only) ───────
-        // .target(
-        //     name: "FeatureTimer",
-        //     dependencies: ["KKitCore", "KKitUI", "KKitServicesAPI"],
-        //     path: "Sources/Features/FeatureTimer"
-        // ),
+        .feature("FeaturePower"),
+        .feature("FeatureStats"),
+        .feature("FeatureNightShift"),
+        .feature("FeatureVolume"),
+        .feature("FeaturePrivacyIndicator"),
+        .feature("FeatureTimer"),
+        .feature("FeatureToggles"),
 
         // ── Tests ─────────────────────────────────────────────────────────────
         .testTarget(name: "KKitCoreTests", dependencies: ["KKitCore", "KKitServicesTesting"]),
@@ -50,5 +58,36 @@ let package = Package(
             name: "KKitServicesTests",
             dependencies: ["KKitCore", "KKitServicesAPI", "KKitServices", "KKitServicesTesting"]
         ),
+        .testTarget(
+            name: "KKitHostsTests",
+            dependencies: ["KKitCore", "KKitServicesAPI", "KKitHosts", "KKitServicesTesting"]
+        ),
+        .featureTests("FeaturePower"),
+        .featureTests("FeatureStats"),
+        .featureTests("FeatureNightShift"),
+        .featureTests("FeatureVolume"),
+        .featureTests("FeaturePrivacyIndicator"),
+        .featureTests("FeatureTimer"),
+        .featureTests("FeatureToggles"),
     ]
 )
+
+// A feature target: depends on KKitCore, KKitUI and KKitServicesAPI only.
+extension Target {
+    static func feature(_ name: String) -> Target {
+        .target(
+            name: name,
+            dependencies: ["KKitCore", "KKitUI", "KKitServicesAPI"],
+            path: "Sources/Features/\(name)",
+            exclude: ["README.md"]
+        )
+    }
+
+    static func featureTests(_ name: String) -> Target {
+        .testTarget(
+            name: "\(name)Tests",
+            dependencies: [.target(name: name), "KKitCore", "KKitServicesAPI", "KKitServicesTesting"],
+            path: "Tests/Features/\(name)Tests"
+        )
+    }
+}

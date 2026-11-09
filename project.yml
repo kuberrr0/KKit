@@ -84,4 +84,12 @@ targets:
         product: FeatureScreenTools
       - package: KKitModules
         product: FeatureShelf
+      - package: KKitModules
+        product: FeatureKeyboard
+      - package: KKitModules
+        product: FeatureWindows
+      - package: KKitModules
+        product: FeatureCleanMode
+      - package: KKitModules
+        product: FeatureBrightness
     scheme: {}

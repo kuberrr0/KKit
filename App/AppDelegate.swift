@@ -56,6 +56,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // M3: the clipboard (polled only while Clipboard History listens) and ScreenCaptureKit.
         services.register((any PasteboardService).self, NSPasteboardService())
         services.register((any ScreenCaptureService).self, ScreenCaptureKitService())
+        // M4: the one event tap, other apps' windows and menus.
+        let input = CGEventTapInputService(events: events)
+        let accessibility = AXAccessibilityService()
+        services.register((any InputTapService).self, input)
+        services.register((any WindowService).self, AXWindowService())
+        services.register((any AccessibilityService).self, accessibility)
         workspaceEvents = WorkspaceEventsPublisher(events: events)
 
         let features = FeatureManager(
@@ -67,7 +73,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             permissions: permissions
         )
         self.features = features
-        permissions.onChange = { [weak features] in
+        // Handlers of features that stopped are dropped by the tap.
+        input.isOwnerActive = { [weak features] id in
+            guard let state = features?.state(of: id) else { return false }
+            return state == .running || state == .starting
+        }
+        permissions.onChange = { [weak features, weak input] in
+            // A newly granted Accessibility lets the tap start.
+            input?.retry()
             guard let features else { return }
             Task { await features.reevaluatePermissions() }
         }
@@ -85,7 +98,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.island = island
         // The Floating Bar is a host and a service too: features open it with a query
         // or in one of their modes.
-        let floatingBar = FloatingBarHost(dependencies: dependencies, storage: storage, island: island)
+        let floatingBar = FloatingBarHost(
+            dependencies: dependencies,
+            storage: storage,
+            island: island,
+            accessibility: accessibility
+        )
         services.register((any FloatingBarService).self, floatingBar)
         self.floatingBar = floatingBar
         menuBar = MenuBarHost(dependencies: dependencies)
@@ -97,6 +115,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let commandRunner = ExternalCommandRunner(commands: commands, settings: settings, floatingBar: floatingBar)
         ExternalCommandRunner.shared = commandRunner
         self.commandRunner = commandRunner
+        // Features run commands by id through it (Keyboard's leader sequences).
+        services.register((any CommandRunnerService).self, commandRunner)
         registerAppCommands()
 
         Task {

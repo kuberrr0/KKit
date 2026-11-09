@@ -27,6 +27,10 @@ let package = Package(
         .library(name: "FeatureClipboard", targets: ["FeatureClipboard"]),
         .library(name: "FeatureScreenTools", targets: ["FeatureScreenTools"]),
         .library(name: "FeatureShelf", targets: ["FeatureShelf"]),
+        .library(name: "FeatureKeyboard", targets: ["FeatureKeyboard"]),
+        .library(name: "FeatureWindows", targets: ["FeatureWindows"]),
+        .library(name: "FeatureCleanMode", targets: ["FeatureCleanMode"]),
+        .library(name: "FeatureBrightness", targets: ["FeatureBrightness"]),
     ],
     dependencies: [
         // 2.x: 3.x needs swift-tools 6.2 (Xcode 26).
@@ -63,6 +67,10 @@ let package = Package(
         .feature("FeatureClipboard"),
         .feature("FeatureScreenTools"),
         .feature("FeatureShelf"),
+        .feature("FeatureKeyboard"),
+        .feature("FeatureWindows"),
+        .feature("FeatureCleanMode"),
+        .feature("FeatureBrightness"),
 
         // ── Tests ─────────────────────────────────────────────────────────────
         .testTarget(name: "KKitCoreTests", dependencies: ["KKitCore", "KKitServicesTesting"]),
@@ -88,6 +96,10 @@ let package = Package(
         .featureTests("FeatureClipboard"),
         .featureTests("FeatureScreenTools"),
         .featureTests("FeatureShelf"),
+        .featureTests("FeatureKeyboard"),
+        .featureTests("FeatureWindows"),
+        .featureTests("FeatureCleanMode"),
+        .featureTests("FeatureBrightness"),
     ]
 )
 

@@ -71,9 +71,25 @@ public struct AudioState: Sendable, Equatable {
     }
 }
 
-/// Devices, default output/input, volume and mute (CoreAudio).
-///
-/// Per-app volume (process taps) arrives with M4.
+/// An app that has audio clients, for the per-app volume mixer. Helper processes
+/// (browser renderers) are grouped under their app.
+public struct AudioApp: Identifiable, Hashable, Sendable {
+    public var bundleID: String
+    public var name: String
+    /// Playing sound right now.
+    public var isPlaying: Bool
+
+    public init(bundleID: String, name: String, isPlaying: Bool) {
+        self.bundleID = bundleID
+        self.name = name
+        self.isPlaying = isPlaying
+    }
+
+    public var id: String { bundleID }
+}
+
+/// Devices, default output/input, volume and mute (CoreAudio), and per-app volume
+/// through Core Audio process taps (M4).
 @MainActor
 public protocol AudioService: AnyObject {
     var state: AudioState { get }
@@ -84,4 +100,13 @@ public protocol AudioService: AnyObject {
     /// and restoring it afterwards.
     func setMuted(_ muted: Bool, for scope: AudioScope)
     func setDefaultDevice(_ deviceID: UInt32, for scope: AudioScope)
+
+    // ── Per-app volume ──
+    /// Apps with audio clients, playing ones first.
+    func audioApps() -> [AudioApp]
+    /// 0…1; 1 (the default) means KKit leaves the app alone.
+    func appVolume(for bundleID: String) -> Double
+    /// Below 1, KKit taps the app's audio and plays it back quieter. The first tap asks
+    /// for permission to capture audio.
+    func setAppVolume(_ volume: Double, for bundleID: String)
 }

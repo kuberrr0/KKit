@@ -466,6 +466,15 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 > areas and windows without KKit's panels; recording needs macOS 15. The region picker
 > lives in `OverlayService.pickRegion`.
 
+> **As built (M4):** `InputTapService` is `CGEventTapInputService`: handlers are
+> `@MainActor` closures added with `context.input.add(priority:interests:)` and return
+> `.pass` or `.consume` (the Hyper key rewrites `event.cgEvent.flags` in place and
+> passes). Priorities are `.safety`, `.high`, `.normal`, `.low`. `WindowService`
+> (`AXWindowService`) and `AccessibilityService` (`AXAccessibilityService`) do their AX
+> calls in actors with a 0.3 s messaging timeout per app. `CommandRunnerService` runs
+> commands by id. `DisplayService` gained brightness (built-in displays) and
+> `AudioService` per-app volume (`ProcessTapMixer`, macOS 14.2 process taps).
+
 ### InputTapService in detail
 
 Keyboard, Window Management, Volume, Clean Mode and (later) scroll-direction all need to
@@ -592,25 +601,26 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 
 | Feature | Island | Floating Bar | Menu bar | Hotkeys | Input tap | Overlay | Audio | Display | Power | SysInfo | Pasteboard | Capture | AX | Storage | Permissions needed |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Volume & Audio | ● HUD, scroll | ● cmds | ● slider, devices, tile | ● | ○ media keys, push-to-talk (M4) | | ● | | | | | | | | Accessibility (keys, M4) |
-| Floating Bar host | | — | | ● | | ● | | | | | | | ○ menus | ● frecency | Accessibility (menu items), Automation (tabs) |
+| Volume & Audio | ● HUD, scroll | ● cmds | ● slider, devices, app volume, tile | ● | ○ media keys, push-to-talk | | ● per-app taps | | | | | | | | Accessibility (keys, optional), audio capture (per-app) |
+| Brightness | ● HUD | ● cmds | ● slider | ● | ○ brightness keys | | | ● brightness | | | | | | | Accessibility (keys, optional) |
+| Floating Bar host | | — | | ● | | ● | | | | | | | ○ `m ` menu items | ● frecency | Accessibility (menu items), Automation (tabs) |
 | Stats | ● alerts, page | ● cmds | ● items | | | | | | ● battery | ● | | | | ○ history | — |
 | Power | ● indicator, page | ● cmds | ● tile | ● | | | | ○ external display | ● | | | | | | — |
 | Island host | — | | | | | ● | ○ | | | | | | | | Automation (now playing fallback) |
 | Screen Tools | ● thumbnail, rec | ● cmds | ● | ● | | ● picker | ○ audio | | | | ● copy | ● | | ● | Screen Recording, Microphone |
 | Clipboard | ○ flash | ● provider, mode | ● | ● | | ● picker | | | | | ● | | ● paste | ● SQLite | Accessibility, pasteboard access |
 | Shelf | ● drop zone, page | ● actions | ○ | ● | | | | | | | | | | ● | — |
-| Keyboard | ○ cheat sheet | ● assign hotkey | | ● | ● Hyper, leaders | ● cheat sheet | | | | | | | | ● | Accessibility, Input Monitoring |
+| Keyboard | ○ errors | ○ commands to bind | | ● | ● Hyper, bindings, leaders | ● cheat sheet, leader | | | | | | | | | Accessibility |
 | Night Shift | | ● cmds | ● tile, slider | ● | | | | ● gamma, dim, wake | | | | | | | Location (optional) |
 | Quick Note | ○ "saved" | ● `n ` mode, ⌘K action | | ● | | | | | | | ○ | | ○ selection | ● bookmark | — (folder picked by user) |
-| Window Management | | ● cmds | | ● | ● modifier + mouse, drag snap | ● snap preview | | | | | | | ● WindowService | ● layouts | Accessibility |
+| Window Management | ○ layout saved | ● cmds, layouts provider | | ● | ● modifier + mouse, drag snap | ● snap preview | | | | | | | ● WindowService | ● layouts | Accessibility |
 | Menu Bar Manager | | ● `m ` provider | ● separators | ● | | ● drop-down bar | | | | | | ○ icon images | ● MenuBarItems | ● | Accessibility, Screen Recording |
 | Quick Toggles | | ● cmds | ● tiles | ● | | ○ hide desktop | | | | | | | | | Automation (per toggle) |
 | Privacy Indicator | ● ear, page | ● cmd | | | | | ● DeviceUsage, mute | | | | | | | ○ log | — |
 | Timer | ● countdowns, alert, page | ● cmds | ● tile | ● | | | | | | | | | | ● saved timers | Notifications (optional) |
 | Calculator | | ● `=` provider, auto-detect | | | | | | | | | ● copy | | | ● rate cache | — (network: exchange rates) |
 | Search | | ● apps, `f `, `/`, `w ` providers | | | | | | | | | | | | | — (Full Disk Access for Safari bookmarks) |
-| Clean Mode | | ● cmd | ● tile | ● | ● swallow all | ● lock overlay | | | | | | | | | Accessibility, Input Monitoring |
+| Clean Mode | | ● cmds | ● tile | ● | ● swallow all (`.safety`) | ● lock overlay | | | | | | | | | Accessibility |
 
 This table is also the build order hint: **Overlay, Hotkeys, Permissions, Settings and the
 Island are used by almost everything**, so they come first.

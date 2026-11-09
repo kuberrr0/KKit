@@ -18,6 +18,7 @@ public final class CoreAudioService: AudioService {
     /// Input volume saved by the "mute by volume 0" fallback, per device uid.
     private var savedInputVolumes: [String: Double] = [:]
     private var reloadScheduled = false
+    private let mixer = ProcessTapMixer()
     private let log = KKitLog.logger("audio")
 
     public init() {
@@ -87,6 +88,20 @@ public final class CoreAudioService: AudioService {
         reload()
     }
 
+    // MARK: Per-app volume
+
+    public func audioApps() -> [AudioApp] {
+        mixer.apps()
+    }
+
+    public func appVolume(for bundleID: String) -> Double {
+        mixer.volume(for: bundleID)
+    }
+
+    public func setAppVolume(_ volume: Double, for bundleID: String) {
+        mixer.setVolume(volume, for: bundleID)
+    }
+
     // MARK: Private
 
     private static func caScope(_ scope: AudioScope) -> AudioObjectPropertyScope {
@@ -105,9 +120,12 @@ public final class CoreAudioService: AudioService {
     }
 
     private func reload() {
-        let devices = CA.allDeviceIDs().compactMap(CA.device).map {
-            AudioDevice(id: $0.id, uid: $0.uid, name: $0.name, hasOutput: $0.hasOutput, hasInput: $0.hasInput, isBuiltIn: $0.isBuiltIn)
-        }
+        let devices = CA.allDeviceIDs().compactMap(CA.device)
+            // The per-app volume mixer's own aggregate devices.
+            .filter { $0.name != ProcessTapMixer.aggregateName }
+            .map {
+                AudioDevice(id: $0.id, uid: $0.uid, name: $0.name, hasOutput: $0.hasOutput, hasInput: $0.hasInput, isBuiltIn: $0.isBuiltIn)
+            }
         let outputID = CA.defaultDevice(input: false)
         let inputID = CA.defaultDevice(input: true)
         let output = devices.first { $0.id == outputID }
@@ -133,6 +151,7 @@ public final class CoreAudioService: AudioService {
             state = updated
             broadcast.send(updated)
         }
+        mixer.outputDeviceChanged(uid: output?.uid)
         updateDeviceListeners()
     }
 

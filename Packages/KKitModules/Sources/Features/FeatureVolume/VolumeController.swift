@@ -61,12 +61,15 @@ final class VolumeController {
         }
     }
 
-    func stepVolume(up: Bool, fine: Bool = false) {
+    /// `fromKey`: a volume key, so the HUD shows even with "Show HUD" off, since KKit
+    /// replaced macOS's.
+    func stepVolume(up: Bool, fine: Bool = false, fromKey: Bool = false) {
         guard let current = effectiveOutputVolume else {
             showNoVolumeControlHUD()
             return
         }
-        setVolume(VolumeMath.stepped(current, step: step, up: up, fine: fine, limit: limit))
+        setVolume(VolumeMath.stepped(current, step: step, up: up, fine: fine, limit: limit), source: .slider)
+        showVolumeHUD(force: fromKey)
     }
 
     func toggleMute() {
@@ -98,6 +101,75 @@ final class VolumeController {
 
     func toggleMicMute() {
         setMicMuted(!state.inputMuted)
+    }
+
+    // MARK: Per-app volume
+
+    func audioApps() -> [AudioApp] {
+        audio.audioApps()
+    }
+
+    func appVolume(for bundleID: String) -> Double {
+        settings[VolumeSettings.appVolumes][bundleID] ?? 1
+    }
+
+    /// Sets and remembers an app's volume.
+    func setAppVolume(_ volume: Double, for bundleID: String) {
+        let clamped = min(max(volume, 0), 1)
+        if clamped >= 0.995 {
+            settings[VolumeSettings.appVolumes][bundleID] = nil
+            audio.setAppVolume(1, for: bundleID)
+        } else {
+            settings[VolumeSettings.appVolumes][bundleID] = clamped
+            audio.setAppVolume(clamped, for: bundleID)
+        }
+    }
+
+    /// Puts back the remembered volumes, at start.
+    func applySavedAppVolumes() {
+        for (bundleID, volume) in settings[VolumeSettings.appVolumes] where volume < 1 {
+            audio.setAppVolume(volume, for: bundleID)
+        }
+    }
+
+    /// Every app back to full volume, at stop. The remembered volumes stay.
+    func releaseAppVolumes() {
+        for bundleID in settings[VolumeSettings.appVolumes].keys {
+            audio.setAppVolume(1, for: bundleID)
+        }
+    }
+
+    // MARK: Keys
+
+    /// A volume media key. Returns whether it was used.
+    func handleMediaKey(_ media: MediaKeyEvent, modifiers: Shortcut.Modifiers) -> Bool {
+        switch VolumeKeyAction.action(for: media, modifiers: modifiers) {
+        case .step(let up, let fine):
+            stepVolume(up: up, fine: fine, fromKey: true)
+            return true
+        case .toggleMute:
+            markOwnChange()
+            audio.setMuted(!state.outputMuted, for: .output)
+            refresh()
+            showVolumeHUD(force: true)
+            return true
+        case .swallow:
+            return true
+        case .pass:
+            return false
+        }
+    }
+
+    /// Push-to-talk and push-to-mute: the mic follows the key, quietly (no HUD for every
+    /// press; the Island's mic indicator shows it).
+    func setMicMutedByKey(_ muted: Bool) {
+        guard state.defaultInput != nil, state.inputMuted != muted else { return }
+        markOwnChange()
+        audio.setMuted(muted, for: .input)
+        refresh()
+        if settings[VolumeSettings.soundOnMicMute] {
+            NSSound(named: muted ? "Pop" : "Tink")?.play()
+        }
     }
 
     func setDefault(_ device: AudioDevice, for scope: AudioScope) {

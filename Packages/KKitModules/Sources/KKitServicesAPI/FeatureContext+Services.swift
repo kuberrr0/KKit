@@ -74,4 +74,24 @@ public extension FeatureContext {
     var screenCapture: any ScreenCaptureService {
         services.require((any ScreenCaptureService).self)
     }
+
+    /// The shared event tap (M4). Handlers are removed when the feature stops.
+    var input: FeatureInput {
+        FeatureInput(owner: id, service: services.require((any InputTapService).self))
+    }
+
+    /// Other apps' windows (M4).
+    var windows: any WindowService {
+        services.require((any WindowService).self)
+    }
+
+    /// The app in front, its menus and selected text (M4).
+    var accessibility: any AccessibilityService {
+        services.require((any AccessibilityService).self)
+    }
+
+    /// Runs any KKit command by id (M4).
+    var commandRunner: any CommandRunnerService {
+        services.require((any CommandRunnerService).self)
+    }
 }

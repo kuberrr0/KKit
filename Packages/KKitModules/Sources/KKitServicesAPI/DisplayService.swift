@@ -43,4 +43,14 @@ public protocol DisplayService: AnyObject {
     func setColorAdjustment(_ adjustment: ColorAdjustment, for displayID: UInt32)
     /// Restores every display's own colour profile.
     func resetColorAdjustments()
+
+    /// 0…1, or `nil` when KKit can't control this display's brightness (most external
+    /// displays until DDC support).
+    func brightness(of displayID: UInt32) -> Double?
+    func setBrightness(_ brightness: Double, for displayID: UInt32)
+}
+
+public extension DisplayService {
+    /// The built-in display, if it's on.
+    var builtInDisplay: DisplayInfo? { displays.first(where: \.isBuiltIn) }
 }

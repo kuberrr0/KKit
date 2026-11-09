@@ -173,3 +173,137 @@ struct VolumeControllerTests {
         await feature.stop()
     }
 }
+
+struct PushKeyTrackerTests {
+    @Test func normalKeyIsHeldUntilReleased() {
+        var tracker = PushKeyTracker(key: Shortcut(keyCode: Shortcut.Key.space, modifiers: [.control]))
+        let wrong = tracker.handle(.keyDown, keyCode: Shortcut.Key.space, modifiers: [], isFunctionDown: false, isRepeat: false)
+        #expect(wrong.change == nil)
+        #expect(!wrong.consume)
+        let down = tracker.handle(.keyDown, keyCode: Shortcut.Key.space, modifiers: [.control], isFunctionDown: false, isRepeat: false)
+        #expect(down.change == .pressed)
+        #expect(down.consume)
+        let repeated = tracker.handle(.keyDown, keyCode: Shortcut.Key.space, modifiers: [.control], isFunctionDown: false, isRepeat: true)
+        #expect(repeated.change == nil)
+        #expect(repeated.consume)
+        // Letting go of ⌃ first still ends it on the key's release.
+        let up = tracker.handle(.keyUp, keyCode: Shortcut.Key.space, modifiers: [], isFunctionDown: false, isRepeat: false)
+        #expect(up.change == .released)
+        #expect(up.consume)
+    }
+
+    @Test func modifierOnItsOwn() {
+        var tracker = PushKeyTracker(key: Shortcut(keyCode: Shortcut.Key.rightOption, modifiers: []))
+        #expect(tracker.isModifierOnly)
+        let other = tracker.handle(.flagsChanged, keyCode: Shortcut.Key.leftOption, modifiers: [.option], isFunctionDown: false, isRepeat: false)
+        #expect(other.change == nil)
+        let down = tracker.handle(.flagsChanged, keyCode: Shortcut.Key.rightOption, modifiers: [.option], isFunctionDown: false, isRepeat: false)
+        #expect(down.change == .pressed)
+        #expect(!down.consume)
+        // Left ⌥ still held keeps the flag set, but this is the right key's release.
+        let up = tracker.handle(.flagsChanged, keyCode: Shortcut.Key.rightOption, modifiers: [.option], isFunctionDown: false, isRepeat: false)
+        #expect(up.change == .released)
+    }
+
+    @Test func functionKey() {
+        var tracker = PushKeyTracker(key: Shortcut(keyCode: Shortcut.Key.function, modifiers: []))
+        let down = tracker.handle(.flagsChanged, keyCode: Shortcut.Key.function, modifiers: [], isFunctionDown: true, isRepeat: false)
+        #expect(down.change == .pressed)
+        let up = tracker.handle(.flagsChanged, keyCode: Shortcut.Key.function, modifiers: [], isFunctionDown: false, isRepeat: false)
+        #expect(up.change == .released)
+    }
+}
+
+struct VolumeKeyActionTests {
+    @Test func actions() {
+        let up = MediaKeyEvent(key: .volumeUp, isDown: true, isRepeat: false)
+        #expect(VolumeKeyAction.action(for: up, modifiers: []) == .step(up: true, fine: false))
+        #expect(VolumeKeyAction.action(for: up, modifiers: [.shift, .option]) == .step(up: true, fine: true))
+        let release = MediaKeyEvent(key: .volumeDown, isDown: false, isRepeat: false)
+        #expect(VolumeKeyAction.action(for: release, modifiers: []) == .swallow)
+        let mute = MediaKeyEvent(key: .mute, isDown: true, isRepeat: false)
+        #expect(VolumeKeyAction.action(for: mute, modifiers: []) == .toggleMute)
+        let play = MediaKeyEvent(key: .play, isDown: true, isRepeat: false)
+        #expect(VolumeKeyAction.action(for: play, modifiers: []) == .pass)
+    }
+}
+
+@MainActor
+struct VolumeInputTests {
+    @Test func volumeKeysAreTakenOver() async throws {
+        let env = TestEnvironment()
+        let feature = VolumeFeature(context: env.makeContext(for: "volume"))
+        try await feature.start()
+        await env.settle()
+        #expect(env.input.sendMedia(.volumeUp))
+        #expect(env.input.sendMedia(.volumeUp, down: false))
+        #expect(env.audio.state.outputVolume == 0.5625)
+        #expect(env.island.huds.last?.id == "volume")
+        #expect(env.input.sendMedia(.mute))
+        #expect(env.audio.state.outputMuted)
+        // Not ours.
+        #expect(!env.input.sendMedia(.play))
+        await feature.stop()
+        #expect(env.input.handlers(owner: "volume").isEmpty)
+    }
+
+    @Test func takeoverCanBeTurnedOff() async throws {
+        let env = TestEnvironment()
+        let context = env.makeContext(for: "volume")
+        context.settings[VolumeSettings.takeOverVolumeKeys] = false
+        let feature = VolumeFeature(context: context)
+        try await feature.start()
+        await env.settle()
+        #expect(!env.input.sendMedia(.volumeUp))
+        #expect(env.audio.state.outputVolume == 0.5)
+        await feature.stop()
+    }
+
+    @Test func pushToTalk() async throws {
+        let env = TestEnvironment()
+        let context = env.makeContext(for: "volume")
+        context.settings[VolumeSettings.pushToTalkKey] = Shortcut(keyCode: Shortcut.Key.rightOption, modifiers: [])
+        let feature = VolumeFeature(context: context)
+        try await feature.start()
+        await env.settle()
+        #expect(env.audio.state.inputMuted)
+        env.input.sendFlags([.option], keyCode: Shortcut.Key.rightOption)
+        #expect(!env.audio.state.inputMuted)
+        env.input.sendFlags([], keyCode: Shortcut.Key.rightOption)
+        #expect(env.audio.state.inputMuted)
+        await feature.stop()
+    }
+
+    @Test func pushToMute() async throws {
+        let env = TestEnvironment()
+        let context = env.makeContext(for: "volume")
+        context.settings[VolumeSettings.pushToMuteKey] = Shortcut(keyCode: Shortcut.Key.m, modifiers: [.control, .shift])
+        let feature = VolumeFeature(context: context)
+        try await feature.start()
+        await env.settle()
+        #expect(!env.audio.state.inputMuted)
+        #expect(env.input.sendKey(Shortcut.Key.m, down: true, modifiers: [.control, .shift]))
+        #expect(env.audio.state.inputMuted)
+        #expect(env.input.sendKey(Shortcut.Key.m, down: false, modifiers: [.control, .shift]))
+        #expect(!env.audio.state.inputMuted)
+        await feature.stop()
+    }
+
+    @Test func appVolumesAreRememberedAndReapplied() async throws {
+        let env = TestEnvironment()
+        let settings = FeatureSettings(featureID: "volume", store: env.settings)
+        let controller = VolumeController(audio: env.audio, settings: settings)
+        controller.setAppVolume(0.4, for: "com.example.music")
+        #expect(env.audio.appVolume(for: "com.example.music") == 0.4)
+        #expect(settings[VolumeSettings.appVolumes] == ["com.example.music": 0.4])
+
+        controller.releaseAppVolumes()
+        #expect(env.audio.appVolume(for: "com.example.music") == 1)
+        controller.applySavedAppVolumes()
+        #expect(env.audio.appVolume(for: "com.example.music") == 0.4)
+
+        controller.setAppVolume(1, for: "com.example.music")
+        #expect(settings[VolumeSettings.appVolumes].isEmpty)
+        #expect(env.audio.appVolume(for: "com.example.music") == 1)
+    }
+}

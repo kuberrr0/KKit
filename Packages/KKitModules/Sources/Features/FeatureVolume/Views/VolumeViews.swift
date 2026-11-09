@@ -1,3 +1,4 @@
+import AppKit
 import KKitCore
 import KKitServicesAPI
 import KKitUI
@@ -6,6 +7,7 @@ import SwiftUI
 /// The volume row in the KKit menu: mute button, slider, and output/input pickers.
 struct VolumeMenuSection: View {
     let controller: VolumeController
+    @State private var showsApps = false
 
     var body: some View {
         let state = controller.state
@@ -70,6 +72,14 @@ struct VolumeMenuSection: View {
                 .help(state.inputMuted ? Text("Unmute microphone") : Text("Mute microphone"))
                 .accessibilityLabel(state.inputMuted ? Text("Unmute microphone") : Text("Mute microphone"))
             }
+            DisclosureGroup(isExpanded: $showsApps) {
+                AppVolumeList(controller: controller, playingOnly: true)
+                    .padding(.top, KKSpacing.xs)
+            } label: {
+                Text("App volume")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
@@ -115,6 +125,8 @@ struct AudioDeviceMenu: View {
 /// Settings › Volume & Audio.
 struct VolumeSettingsView: View {
     let controller: VolumeController
+    let inputTapRunning: @MainActor () -> Bool
+    let requestAccess: @MainActor () -> Void
 
     @Setting(VolumeSettings.step) private var step
     @Setting(VolumeSettings.volumeLimit) private var volumeLimit
@@ -126,6 +138,9 @@ struct VolumeSettingsView: View {
     @Setting(VolumeSettings.outputPriority) private var outputPriority
     @Setting(VolumeSettings.autoSwitchInput) private var autoSwitchInput
     @Setting(VolumeSettings.inputPriority) private var inputPriority
+    @Setting(VolumeSettings.takeOverVolumeKeys) private var takeOverVolumeKeys
+    @Setting(VolumeSettings.pushToTalkKey) private var pushToTalkKey
+    @Setting(VolumeSettings.pushToMuteKey) private var pushToMuteKey
 
     private struct StepOption: Identifiable {
         let label: String
@@ -168,14 +183,44 @@ struct VolumeSettingsView: View {
                     .foregroundStyle(.secondary)
             }
             KKSection(
-                String(localized: "Island HUD"),
-                footer: String(localized: "The volume keys still show macOS's own HUD; KKit takes them over in a later update.")
+                String(localized: "Volume keys and HUD"),
+                footer: String(localized: "With the volume keys taken over, KKit uses its step size and limit and shows the Island HUD instead of macOS's. ⇧⌥ with a volume key gives quarter steps. Needs Accessibility.")
             ) {
+                Toggle(String(localized: "Use KKit for the volume keys"), isOn: $takeOverVolumeKeys)
+                if takeOverVolumeKeys, !inputTapRunning() {
+                    HStack {
+                        Text("KKit needs Accessibility to see the volume keys.")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                        Spacer()
+                        Button(String(localized: "Allow…")) { requestAccess() }
+                    }
+                }
                 Toggle(String(localized: "Show a HUD for changes made with KKit"), isOn: $showHUD)
-                Toggle(String(localized: "Also for the volume keys and Control Center"), isOn: $hudForSystemChanges)
+                Toggle(String(localized: "Also for changes made in Control Center and other apps"), isOn: $hudForSystemChanges)
             }
-            KKSection(String(localized: "Microphone")) {
+            KKSection(
+                String(localized: "Microphone"),
+                footer: String(localized: "With a push-to-talk key the microphone stays muted until you hold the key. A key on its own, like Right ⌥ or fn, works too. Needs Accessibility.")
+            ) {
                 Toggle(String(localized: "Play a sound on mute and unmute"), isOn: $soundOnMicMute)
+                LabeledContent(String(localized: "Push to talk")) {
+                    KKKeyRecorder(shortcut: $pushToTalkKey, allowsModifierOnly: true)
+                }
+                LabeledContent(String(localized: "Push to mute")) {
+                    KKKeyRecorder(shortcut: $pushToMuteKey, allowsModifierOnly: true)
+                }
+                if pushToTalkKey != nil, pushToTalkKey == pushToMuteKey {
+                    Text("Use different keys for push to talk and push to mute.")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+            KKSection(
+                String(localized: "App volume"),
+                footer: String(localized: "Turning an app down plays its sound through KKit, quieter. The first time, macOS asks to let KKit capture audio. Volumes are remembered per app.")
+            ) {
+                AppVolumeList(controller: controller)
             }
             KKSection(
                 String(localized: "Output auto-switch"),
@@ -249,5 +294,76 @@ struct PriorityListEditor: View {
         let target = index + offset
         guard list.indices.contains(target) else { return }
         list.swapAt(index, target)
+    }
+}
+
+/// Apps with audio and a slider each.
+struct AppVolumeList: View {
+    let controller: VolumeController
+    var playingOnly = false
+
+    @State private var apps: [AudioApp] = []
+    @State private var volumes: [String: Double] = [:]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: KKSpacing.s) {
+            if shownApps.isEmpty {
+                Text(playingOnly ? "No apps are playing sound." : "No apps are using audio.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(shownApps) { app in
+                HStack(spacing: KKSpacing.s) {
+                    AppIcon(bundleID: app.bundleID)
+                    Text(app.name)
+                        .lineLimit(1)
+                        .frame(width: 110, alignment: .leading)
+                    Slider(
+                        value: Binding(
+                            get: { volumes[app.bundleID] ?? controller.appVolume(for: app.bundleID) },
+                            set: { value in
+                                volumes[app.bundleID] = value
+                                controller.setAppVolume(value, for: app.bundleID)
+                            }
+                        ),
+                        in: 0...1
+                    )
+                    .labelsHidden()
+                    .accessibilityLabel(Text("\(app.name) volume"))
+                    Text(KKFormat.percent(volumes[app.bundleID] ?? controller.appVolume(for: app.bundleID)))
+                        .font(.callout.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(minWidth: 40, alignment: .trailing)
+                }
+            }
+            if !playingOnly {
+                Button(String(localized: "Refresh")) { reload() }
+            }
+        }
+        .onAppear { reload() }
+    }
+
+    private var shownApps: [AudioApp] {
+        playingOnly ? apps.filter { $0.isPlaying || controller.appVolume(for: $0.bundleID) < 1 } : apps
+    }
+
+    private func reload() {
+        apps = controller.audioApps()
+        volumes = [:]
+    }
+}
+
+private struct AppIcon: View {
+    let bundleID: String
+
+    var body: some View {
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                .resizable()
+                .frame(width: 18, height: 18)
+        } else {
+            Image(systemName: "app")
+                .frame(width: 18, height: 18)
+        }
     }
 }

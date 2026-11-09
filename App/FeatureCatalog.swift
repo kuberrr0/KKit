@@ -1,5 +1,8 @@
+import FeatureBrightness
 import FeatureCalculator
+import FeatureCleanMode
 import FeatureClipboard
+import FeatureKeyboard
 import FeatureNightShift
 import FeaturePower
 import FeaturePrivacyIndicator
@@ -11,6 +14,7 @@ import FeatureStats
 import FeatureTimer
 import FeatureToggles
 import FeatureVolume
+import FeatureWindows
 import KKitCore
 
 /// The one list of every feature type, in the order they appear in Settings.
@@ -19,6 +23,7 @@ enum FeatureCatalog {
     @MainActor
     static let all: [any Feature.Type] = [
         VolumeFeature.self,
+        BrightnessFeature.self,
         StatsFeature.self,
         PowerFeature.self,
         NightShiftFeature.self,
@@ -31,5 +36,8 @@ enum FeatureCatalog {
         ClipboardFeature.self,
         ScreenToolsFeature.self,
         ShelfFeature.self,
+        KeyboardFeature.self,
+        WindowsFeature.self,
+        CleanModeFeature.self,
     ]
 }

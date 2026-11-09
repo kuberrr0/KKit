@@ -45,6 +45,8 @@
 	<false/>
 	<key>NSSupportsSuddenTermination</key>
 	<false/>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>KKit captures an app's sound only to play it back at the volume you set for that app.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>KKit records your voice with screen recordings when you turn that on.</string>
 	<key>NSAppleEventsUsageDescription</key>

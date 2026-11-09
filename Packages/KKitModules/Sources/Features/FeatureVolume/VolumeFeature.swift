@@ -3,8 +3,8 @@ import KKitServicesAPI
 import KKitUI
 import SwiftUI
 
-/// Output volume, mute, device switching with priorities, global mic mute, and an
-/// Island HUD. DESIGN.md §3.1. Per-app volume and the volume-key takeover arrive in M4.
+/// Output volume, mute, device switching with priorities, global mic mute, an Island
+/// HUD, the volume-key takeover, push-to-talk and per-app volume. DESIGN.md §3.1.
 @MainActor
 public final class VolumeFeature: Feature {
     public static let manifest = FeatureManifest(
@@ -13,12 +13,16 @@ public final class VolumeFeature: Feature {
         symbol: "speaker.wave.2",
         summary: String(localized: "Finer volume, device switching with priorities, and one-key mic mute."),
         category: .audio,
+        optionalPermissions: [.accessibility],
         enabledByDefault: true
     )
 
     private let context: FeatureContext
     let controller: VolumeController
     private var tasks: [Task<Void, Never>] = []
+    private var mediaToken: InputHandlerToken?
+    private var pushToken: InputHandlerToken?
+    private var pushTrackers: (talk: PushKeyTracker?, mute: PushKeyTracker?) = (nil, nil)
 
     public init(context: FeatureContext) {
         self.context = context
@@ -48,7 +52,28 @@ public final class VolumeFeature: Feature {
                 self.controller.receive(self.context.audio.state)
             }
         })
+        let takeOver = context.settings.changes(of: VolumeSettings.takeOverVolumeKeys)
+        tasks.append(Task { [weak self] in
+            for await _ in takeOver {
+                self?.updateMediaHandler()
+            }
+        })
+        let pushToTalk = context.settings.changes(of: VolumeSettings.pushToTalkKey)
+        tasks.append(Task { [weak self] in
+            for await _ in pushToTalk {
+                self?.updatePushHandler()
+            }
+        })
+        let pushToMute = context.settings.changes(of: VolumeSettings.pushToMuteKey)
+        tasks.append(Task { [weak self] in
+            for await _ in pushToMute {
+                self?.updatePushHandler()
+            }
+        })
         updateScrollHandler()
+        updateMediaHandler()
+        updatePushHandler()
+        controller.applySavedAppVolumes()
     }
 
     public func stop() async {
@@ -56,6 +81,11 @@ public final class VolumeFeature: Feature {
         tasks = []
         controller.onHUD = nil
         context.island.setScrollHandler(nil)
+        context.input.removeAll()
+        mediaToken = nil
+        pushToken = nil
+        pushTrackers = (nil, nil)
+        controller.releaseAppVolumes()
     }
 
     // MARK: Contributions
@@ -155,8 +185,15 @@ public final class VolumeFeature: Feature {
     }
 
     public var settingsPane: SettingsPane? {
-        SettingsPane { [controller] in
-            VolumeSettingsView(controller: controller)
+        SettingsPane { [controller, context] in
+            VolumeSettingsView(
+                controller: controller,
+                inputTapRunning: { context.input.status == .running },
+                requestAccess: {
+                    let permissions = context.permissions
+                    Task { await permissions.request(.accessibility) }
+                }
+            )
         }
     }
 
@@ -170,6 +207,63 @@ public final class VolumeFeature: Feature {
         } else {
             context.island.setScrollHandler(nil)
         }
+    }
+
+    private func updateMediaHandler() {
+        let enabled = context.settings[VolumeSettings.takeOverVolumeKeys]
+        if enabled, mediaToken == nil {
+            mediaToken = context.input.add(priority: .normal, interests: [.systemDefined]) { [weak self] event in
+                guard let self, let media = event.mediaKey else { return .pass }
+                return self.controller.handleMediaKey(media, modifiers: event.modifiers) ? .consume : .pass
+            }
+        } else if !enabled, let token = mediaToken {
+            context.input.remove(token)
+            mediaToken = nil
+        }
+    }
+
+    private func updatePushHandler() {
+        let talk = context.settings[VolumeSettings.pushToTalkKey]
+        let mute = context.settings[VolumeSettings.pushToMuteKey]
+        if pushTrackers.talk?.key != talk || pushTrackers.mute?.key != mute {
+            pushTrackers = (talk.map(PushKeyTracker.init(key:)), mute.map(PushKeyTracker.init(key:)))
+            if talk != nil {
+                // Push-to-talk: muted until the key is held.
+                controller.setMicMutedByKey(true)
+            }
+        }
+        let wanted = talk != nil || mute != nil
+        if wanted, pushToken == nil {
+            pushToken = context.input.add(priority: .high, interests: [.keyDown, .keyUp, .flagsChanged]) { [weak self] event in
+                self?.handlePushKey(event) ?? .pass
+            }
+        } else if !wanted, let token = pushToken {
+            context.input.remove(token)
+            pushToken = nil
+        }
+    }
+
+    private func handlePushKey(_ event: InputEvent) -> InputDecision {
+        var consume = false
+        if var tracker = pushTrackers.talk {
+            let result = tracker.handle(event.type, keyCode: event.keyCode, modifiers: event.modifiers,
+                                        isFunctionDown: event.isFunctionDown, isRepeat: event.isAutoRepeat)
+            pushTrackers.talk = tracker
+            consume = consume || result.consume
+            if let change = result.change {
+                controller.setMicMutedByKey(change == .released)
+            }
+        }
+        if var tracker = pushTrackers.mute {
+            let result = tracker.handle(event.type, keyCode: event.keyCode, modifiers: event.modifiers,
+                                        isFunctionDown: event.isFunctionDown, isRepeat: event.isAutoRepeat)
+            pushTrackers.mute = tracker
+            consume = consume || result.consume
+            if let change = result.change {
+                controller.setMicMutedByKey(change == .pressed)
+            }
+        }
+        return consume ? .consume : .pass
     }
 
     private func switchDevice(named name: String?, scope: AudioScope) throws {

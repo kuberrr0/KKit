@@ -94,26 +94,30 @@ public final class CommandSearchProvider: SearchProvider {
     ) -> (argument: CommandArgument, score: Double)? {
         let words = text.split(separator: " ").map(String.init)
         guard words.count >= 2 else { return nil }
+        let isText: Bool
+        if case .text = parameter {
+            isText = true
+        } else {
+            isText = false
+        }
         var best: (argument: CommandArgument, score: Double)?
         for split in 1..<words.count {
             let head = words[..<split].joined(separator: " ")
             let tail = words[split...].joined(separator: " ")
             guard let argument = CommandArgumentParser.parse(tail, for: parameter),
-                  let score = FuzzyMatch.score(head, title: title, keywords: keywords),
-                  score >= 0.6
+                  let score = FuzzyMatch.score(head, title: title, keywords: keywords)
             else { continue }
-            var weighted = score
-            if case .text = parameter {
-                weighted *= 0.9
+            if isText {
+                // Free text: the longest head that still names the command by its words
+                // wins, so "start labeled 10m tea" leaves "10m tea".
+                guard score >= 0.75 else { continue }
+                best = (argument, score * 0.9)
             } else {
-                weighted *= 0.97
-            }
-            if weighted > (best?.score ?? 0) {
-                best = (argument, weighted)
-            }
-            // Free text: the shortest head that names the command wins.
-            if case .text = parameter {
-                break
+                guard score >= 0.6 else { continue }
+                let weighted = score * 0.97
+                if weighted > (best?.score ?? 0) {
+                    best = (argument, weighted)
+                }
             }
         }
         return best

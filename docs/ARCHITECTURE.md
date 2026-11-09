@@ -644,7 +644,7 @@ Example: the *Timer* feature (DESIGN.md §3.16), simplified.
    final class TimerFeature: Feature {
        static let manifest = FeatureManifest(
            id: "timer", name: "Timer", symbol: "timer",
-           summary: "Countdowns and Pomodoro in the Island.",
+           summary: "Countdowns and a stopwatch in the Island.",
            category: .productivity, requiredPermissions: [], optionalPermissions: [],
            enabledByDefault: false)
 

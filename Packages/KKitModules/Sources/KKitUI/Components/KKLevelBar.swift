@@ -24,7 +24,7 @@ public struct KKLevelBar: View {
     }
 }
 
-/// A small circular progress ring (timer ears, Pomodoro).
+/// A small circular progress ring (timer ears).
 public struct KKProgressRing: View {
     let progress: Double
     let tint: Color

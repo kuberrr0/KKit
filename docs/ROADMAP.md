@@ -47,7 +47,7 @@ Done. Notes on what was built versus the plan below:
 - **Volume & Audio** (CoreAudio volume, device switching, mic mute, Island HUD; media-key
   takeover once the input tap lands)
 - **Privacy Indicator** (mic/camera in use, in the Island)
-- **Timer, Pomodoro & Stopwatch**
+- **Timer & Stopwatch** (Pomodoro removed later at KV's request)
 - **Quick Toggles**
 
 ## M2 — Floating Bar ✅

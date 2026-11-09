@@ -57,111 +57,6 @@ struct Countdown: Identifiable, Codable, Sendable, Equatable {
     var title: String { label ?? String(localized: "Timer") }
 }
 
-enum PomodoroPhase: String, Codable, Sendable {
-    case work
-    case shortBreak
-    case longBreak
-
-    var title: String {
-        switch self {
-        case .work: String(localized: "Focus")
-        case .shortBreak: String(localized: "Break")
-        case .longBreak: String(localized: "Long break")
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .work: "brain.head.profile"
-        case .shortBreak, .longBreak: "cup.and.saucer"
-        }
-    }
-}
-
-struct PomodoroLengths: Sendable, Equatable {
-    var work: TimeInterval
-    var shortBreak: TimeInterval
-    var longBreak: TimeInterval
-    var longBreakEvery: Int
-
-    static let standard = PomodoroLengths(work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60, longBreakEvery: 4)
-
-    func duration(of phase: PomodoroPhase) -> TimeInterval {
-        switch phase {
-        case .work: work
-        case .shortBreak: shortBreak
-        case .longBreak: longBreak
-        }
-    }
-}
-
-/// A Pomodoro cycle: work, break, work, … with a long break every `longBreakEvery`.
-struct Pomodoro: Codable, Sendable, Equatable {
-    var phase: PomodoroPhase
-    /// Work intervals finished in this cycle.
-    var completedWork: Int
-    var phaseDuration: TimeInterval
-    var endDate: Date?
-    var pausedRemaining: TimeInterval?
-
-    static func start(_ lengths: PomodoroLengths, at date: Date) -> Pomodoro {
-        Pomodoro(phase: .work, completedWork: 0, phaseDuration: lengths.work, endDate: date.addingTimeInterval(lengths.work))
-    }
-
-    var isRunning: Bool { endDate != nil }
-
-    func remaining(at date: Date) -> TimeInterval {
-        if let endDate { return max(0, endDate.timeIntervalSince(date)) }
-        return pausedRemaining ?? phaseDuration
-    }
-
-    func progress(at date: Date) -> Double {
-        guard phaseDuration > 0 else { return 1 }
-        return min(max(1 - remaining(at: date) / phaseDuration, 0), 1)
-    }
-
-    func isFinished(at date: Date) -> Bool {
-        guard let endDate else { return false }
-        return endDate <= date
-    }
-
-    /// The phase after the current one.
-    func nextPhase(_ lengths: PomodoroLengths) -> PomodoroPhase {
-        guard phase == .work else { return .work }
-        let every = max(lengths.longBreakEvery, 1)
-        return (completedWork + 1) % every == 0 ? .longBreak : .shortBreak
-    }
-
-    /// Moves to the next phase, running if `autoStart`, otherwise paused at its full length.
-    mutating func advance(_ lengths: PomodoroLengths, autoStart: Bool, at date: Date) {
-        let next = nextPhase(lengths)
-        if phase == .work {
-            completedWork += 1
-        }
-        phase = next
-        phaseDuration = lengths.duration(of: next)
-        if autoStart {
-            endDate = date.addingTimeInterval(phaseDuration)
-            pausedRemaining = nil
-        } else {
-            endDate = nil
-            pausedRemaining = phaseDuration
-        }
-    }
-
-    mutating func pause(at date: Date) {
-        guard isRunning else { return }
-        pausedRemaining = remaining(at: date)
-        endDate = nil
-    }
-
-    mutating func resume(at date: Date) {
-        guard !isRunning else { return }
-        endDate = date.addingTimeInterval(pausedRemaining ?? phaseDuration)
-        pausedRemaining = nil
-    }
-}
-
 /// A stopwatch with laps.
 struct Stopwatch: Codable, Sendable, Equatable {
     /// Running since; `nil` when paused or reset.
@@ -210,14 +105,12 @@ struct Stopwatch: Codable, Sendable, Equatable {
 /// Everything that's saved, so timers survive a relaunch.
 struct TimerSnapshot: Codable, Sendable, Equatable {
     var countdowns: [Countdown] = []
-    var pomodoro: Pomodoro?
     var stopwatch = Stopwatch()
 }
 
 /// Something that just ended, to announce.
 enum TimerEvent: Equatable {
     case countdownFinished(Countdown)
-    case pomodoroPhaseEnded(finished: PomodoroPhase, next: PomodoroPhase)
 }
 
 /// Parses what's typed after `timer`: "10m tea", "1h30m", "90s", "1:30", "25".

@@ -46,29 +46,6 @@ struct CountdownTests {
     }
 }
 
-struct PomodoroTests {
-    private let start = Date(timeIntervalSince1970: 1_000_000)
-    private let lengths = PomodoroLengths(work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60, longBreakEvery: 2)
-
-    @Test func cyclesWithALongBreak() {
-        var pomodoro = Pomodoro.start(lengths, at: start)
-        var phases: [PomodoroPhase] = [pomodoro.phase]
-        for _ in 0..<4 {
-            pomodoro.advance(lengths, autoStart: true, at: start)
-            phases.append(pomodoro.phase)
-        }
-        #expect(phases == [.work, .shortBreak, .work, .longBreak, .work])
-        #expect(pomodoro.completedWork == 2)
-    }
-
-    @Test func waitsWhenNotAutoStarting() {
-        var pomodoro = Pomodoro.start(lengths, at: start)
-        pomodoro.advance(lengths, autoStart: false, at: start)
-        #expect(!pomodoro.isRunning)
-        #expect(pomodoro.remaining(at: start.addingTimeInterval(9999)) == 5 * 60)
-    }
-}
-
 struct StopwatchTests {
     @Test func lapsAndPauses() {
         let start = Date(timeIntervalSince1970: 1_000_000)
@@ -99,7 +76,7 @@ struct TimerModelTests {
         model.startCountdown(300, at: start)
         #expect(model.nextDeadline == start.addingTimeInterval(60))
 
-        let events = model.collectFinished(at: start.addingTimeInterval(61), lengths: .standard, autoStart: true)
+        let events = model.collectFinished(at: start.addingTimeInterval(61))
         #expect(events.count == 1)
         if case .countdownFinished(let countdown) = events.first {
             #expect(countdown.label == "tea")
@@ -108,16 +85,17 @@ struct TimerModelTests {
         }
         #expect(model.countdowns.count == 1)
         #expect(saved == 3)
-        #expect(model.collectFinished(at: start.addingTimeInterval(62), lengths: .standard, autoStart: true).isEmpty)
+        #expect(model.collectFinished(at: start.addingTimeInterval(62)).isEmpty)
     }
 
-    @Test func advancesThePomodoro() {
-        let model = TimerModel()
-        model.startPomodoro(.standard, at: start)
-        let events = model.collectFinished(at: start.addingTimeInterval(25 * 60), lengths: .standard, autoStart: true)
-        #expect(events == [.pomodoroPhaseEnded(finished: .work, next: .shortBreak)])
-        #expect(model.pomodoro?.phase == .shortBreak)
-        #expect(model.nextDeadline == start.addingTimeInterval(30 * 60))
+    @Test func loadsStateSavedWithAPomodoro() throws {
+        // state.json from before Pomodoro was removed still has a "pomodoro" key.
+        var snapshot = TimerSnapshot()
+        snapshot.countdowns = [Countdown(duration: 60, label: "tea", start: start)]
+        var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(snapshot)) as? [String: Any])
+        json["pomodoro"] = ["phase": "work", "completedWork": 1, "phaseDuration": 1500]
+        let decoded = try JSONDecoder().decode(TimerSnapshot.self, from: JSONSerialization.data(withJSONObject: json))
+        #expect(decoded == snapshot)
     }
 
     @Test func featureAnnouncesAndShowsActivities() async throws {

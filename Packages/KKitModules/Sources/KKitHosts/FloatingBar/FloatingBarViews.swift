@@ -6,7 +6,7 @@ import SwiftUI
 /// Fixed sizes, shared by the view and the host (which sizes the panel to fit).
 enum FloatingBarLayout {
     static let width: CGFloat = 680
-    static let previewWidth: CGFloat = 260
+    static let previewWidth: CGFloat = 280
     static let headerHeight: CGFloat = 54
     static let rowHeight: CGFloat = 40
     static let sectionHeight: CGFloat = 24
@@ -38,16 +38,15 @@ enum FloatingBarLayout {
         } else {
             height += listHeight(rows)
         }
-        var totalWidth = width
+        // The preview (Tab) takes its width from the results; the bar never widens.
         if model.showsPreview {
-            totalWidth += previewWidth
             height = max(height, headerHeight + footerHeight + 6 * rowHeight)
         }
         if model.actionsShown {
             let menu = CGFloat(min(model.currentActions.count, 10)) * actionRowHeight + 44
             height = max(height, headerHeight + footerHeight + menu + 12)
         }
-        return CGSize(width: totalWidth, height: height)
+        return CGSize(width: width, height: height)
     }
 
     static func listHeight(_ rows: [FloatingBarRow]) -> CGFloat {

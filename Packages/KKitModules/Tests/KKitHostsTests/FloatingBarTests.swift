@@ -201,6 +201,17 @@ struct CommandSearchProviderTests {
         #expect(text != nil)
     }
 
+    @Test func findsCommandsByLooserWording() {
+        let (registry, provider) = makeProvider()
+        registry.register([
+            Command(id: "screenTools.pickColor", title: "Pick Colour", symbol: "eyedropper", keywords: ["hex", "eyedropper"]) { _ in },
+        ], owner: "screenTools")
+        for query in ["pick colour", "pick color", "color picker", "colour picker", "colours"] {
+            let top = provider.search(SearchQuery(text: query)).max { $0.score < $1.score }
+            #expect(top?.id == "command:screenTools.pickColor", "\(query)")
+        }
+    }
+
     @Test func prefixAloneListsEverything() {
         let (_, provider) = makeProvider()
         #expect(provider.search(SearchQuery(text: "", isScoped: true)).count == 3)
@@ -258,6 +269,14 @@ struct FloatingBarModelTests {
         #expect(box.runs.map(\.result.id) == ["file:hello"])
         #expect(box.runs.first?.keepOpen == true)
         #expect(model.history.recents.first?.id == "file:hello")
+    }
+
+    @Test func previewKeepsTheBarWidth() async {
+        model.query = "hello"
+        await waitUntil { model.rows.count == 2 }
+        let closed = FloatingBarLayout.size(for: model)
+        model.showsPreview = true
+        #expect(FloatingBarLayout.size(for: model).width == closed.width)
     }
 
     @Test func prefixesScopeToOneProvider() async {

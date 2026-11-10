@@ -55,5 +55,11 @@
 	<string>KKit uses your approximate location to work out sunset and sunrise times for Night Shift.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>KKit uses your approximate location to work out sunset and sunrise times for Night Shift.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>KKit's file search (“f ” in the Floating Bar) shows files on your Desktop.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>KKit's file search (“f ” in the Floating Bar) shows files in your Documents folder.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>KKit's file search (“f ” in the Floating Bar) shows files in your Downloads folder.</string>
 </dict>
 </plist>

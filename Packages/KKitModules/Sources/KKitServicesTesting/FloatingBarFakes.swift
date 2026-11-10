@@ -30,6 +30,7 @@ public final class FakeFloatingBarService: FloatingBarService {
 @MainActor
 public final class FakeFileSearchService: FileSearchService {
     public var files: [FileSearchHit] = []
+    public var blockedFolders: [String] = []
     public private(set) var searches: [String] = []
 
     public init() {}

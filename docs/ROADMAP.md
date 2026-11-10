@@ -160,6 +160,20 @@ Done. Notes on what was built versus the plan below:
 - **Window Switcher** (DESIGN.md §3.19): ⌘Tab through windows with live previews, on
   the shared input tap, `WindowService` and `ScreenCaptureService`. On by default.
 
+## Fixes after M5 testing (2026-11-09)
+
+- While the Island is expanded, a HUD (volume, brightness, …) replaces its header row
+  (page title and picker) for as long as it shows, so scrolling on the Island or the
+  volume keys stay visible.
+- **Now Playing** (was planned in DESIGN.md §3.5 but never built): `NowPlayingService`
+  (`MediaRemoteNowPlayingService`) and the `FeatureNowPlaying` feature (compact artwork
+  and bars while playing, a page with scrubber and controls, `nowPlaying.*` commands).
+  MediaRemote only answers Apple's processes since macOS 15.4, so the service runs
+  `/usr/bin/perl` with a one-line script that loads `KKitMediaRemoteAdapter.framework`
+  (built from `Helpers/MediaRemoteAdapter`, embedded in the app). The helper streams
+  JSON lines and takes commands on stdin; it runs only while the feature listens. No
+  AppleScript fallback: if the helper can't load, Settings shows why.
+
 ## M6 — Extras (pick from DESIGN.md §4)
 
 Next meeting, downloads watcher, on-device AI actions, external display brightness,

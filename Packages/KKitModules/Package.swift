@@ -32,6 +32,7 @@ let package = Package(
         .library(name: "FeatureCleanMode", targets: ["FeatureCleanMode"]),
         .library(name: "FeatureBrightness", targets: ["FeatureBrightness"]),
         .library(name: "FeatureWindowSwitcher", targets: ["FeatureWindowSwitcher"]),
+        .library(name: "FeatureNowPlaying", targets: ["FeatureNowPlaying"]),
     ],
     dependencies: [
         // 2.x: 3.x needs swift-tools 6.2 (Xcode 26).
@@ -73,6 +74,7 @@ let package = Package(
         .feature("FeatureCleanMode"),
         .feature("FeatureBrightness"),
         .feature("FeatureWindowSwitcher"),
+        .feature("FeatureNowPlaying"),
 
         // ── Tests ─────────────────────────────────────────────────────────────
         .testTarget(name: "KKitCoreTests", dependencies: ["KKitCore", "KKitServicesTesting"]),
@@ -103,6 +105,7 @@ let package = Package(
         .featureTests("FeatureCleanMode"),
         .featureTests("FeatureBrightness"),
         .featureTests("FeatureWindowSwitcher"),
+        .featureTests("FeatureNowPlaying"),
     ]
 )
 

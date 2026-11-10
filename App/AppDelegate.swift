@@ -62,6 +62,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         services.register((any InputTapService).self, input)
         services.register((any WindowService).self, AXWindowService())
         services.register((any AccessibilityService).self, accessibility)
+        // Now Playing through the bundled MediaRemote helper (runs only while listened to).
+        services.register(
+            (any NowPlayingService).self,
+            MediaRemoteNowPlayingService(adapterBundle: MediaRemoteNowPlayingService.bundledAdapter)
+        )
         workspaceEvents = WorkspaceEventsPublisher(events: events)
 
         let features = FeatureManager(

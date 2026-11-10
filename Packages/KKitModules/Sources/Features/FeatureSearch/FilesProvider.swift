@@ -2,8 +2,11 @@ import Foundation
 import KKitCore
 import KKitServicesAPI
 
-/// Files and folders from Spotlight. `f ` lists up to 30; root search asks Spotlight
-/// only for three or more letters and shows a few, below apps and commands.
+/// Files and folders from Spotlight, searched through the whole home folder. `f ` lists
+/// up to 30 in the service's order (exact names and shallow paths first); root search
+/// asks Spotlight only for three or more letters and shows a few, below apps and
+/// commands. When macOS still hides Desktop, Documents or Downloads from KKit, `f `
+/// ends with a row that opens the setting.
 @MainActor
 final class FilesProvider: SearchProvider {
     nonisolated static let prefixText = "f "
@@ -28,11 +31,16 @@ final class FilesProvider: SearchProvider {
         let text = query.trimmed
         let scoped = query.isScoped
         guard scoped ? !text.isEmpty : text.count >= 3 else { return .single([]) }
-        let hits = search().search(text, limit: scoped ? 30 : 12)
+        let service = search()
+        let hits = service.search(text, limit: scoped ? 30 : 12)
         return AsyncStream { continuation in
             let task = Task { @MainActor in
                 for await batch in hits {
-                    continuation.yield(Self.results(for: batch, query: text, scoped: scoped))
+                    var results = Self.results(for: batch, query: text, scoped: scoped)
+                    if scoped, let access = Self.accessResult(blocked: service.blockedFolders) {
+                        results.append(access)
+                    }
+                    continuation.yield(results)
                 }
                 continuation.finish()
             }
@@ -40,16 +48,16 @@ final class FilesProvider: SearchProvider {
         }
     }
 
-    /// Scoped: everything, by match then by last use (Spotlight's order). Root: only good
-    /// name matches, scored below apps and commands.
+    /// Scoped: everything, in the service's order. Root: only good name matches, scored
+    /// below apps and commands.
     nonisolated static func results(for hits: [FileSearchHit], query: String, scoped: Bool) -> [SearchResult] {
         var results: [SearchResult] = []
-        for hit in hits {
-            let match = FuzzyMatch.score(query, in: hit.name)
+        for (index, hit) in hits.enumerated() {
             let score: Double
             if scoped {
-                score = 0.5 + 0.5 * (match ?? 0.3)
+                score = 0.99 - 0.01 * Double(index)
             } else {
+                let match = FuzzyMatch.score(query, in: hit.name)
                 guard let match, match >= 0.6 else { continue }
                 score = match * 0.7
             }
@@ -59,6 +67,25 @@ final class FilesProvider: SearchProvider {
             }
         }
         return results
+    }
+
+    /// "Allow Access to Desktop and Downloads", opening Privacy & Security › Files and
+    /// Folders, or `nil` when nothing is blocked.
+    nonisolated static func accessResult(blocked: [String]) -> SearchResult? {
+        guard !blocked.isEmpty,
+              let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")
+        else { return nil }
+        let folders = ListFormatter.localizedString(byJoining: blocked)
+        return SearchResult(
+            id: "files:access",
+            title: String(localized: "Allow Access to \(folders)"),
+            subtitle: String(localized: "macOS hides the files in them from KKit until you turn KKit on in Files and Folders"),
+            icon: .symbol("lock"),
+            score: 0,
+            kind: .url(url),
+            actionTitle: String(localized: "Open Settings"),
+            isFallback: true
+        )
     }
 
     nonisolated static func result(for hit: FileSearchHit, score: Double) -> SearchResult {

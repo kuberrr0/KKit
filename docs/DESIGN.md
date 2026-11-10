@@ -149,7 +149,7 @@ Empty query                                    Typing
   | *(none)* | Everything, ranked by frecency + fuzzy match | |
   | `a ` | Applications, A to Z | Apps also show in every search; `a ` alone lists them all |
   | `>` | Commands (all KKit features + system actions) | Lock, sleep, empty Trash, dark mode, eject all, window layouts… |
-  | `f ` | Files & folders | Spotlight (`NSMetadataQuery`) |
+  | `f ` | Files & folders | Spotlight (`NSMetadataQuery`) over the whole home folder; exact names and shallow paths first. Desktop, Documents and Downloads need macOS's per-folder access, asked on the first search |
   | `w ` | Web: URLs, search engines, bookmarks, open tabs | Tabs need Automation permission per browser |
   | `/` | System Settings panes | Deep links via `x-apple.systempreferences:` |
   | `m ` | Menu items of the frontmost app, and menu bar icons (incl. hidden ones) | Accessibility API; shares data with the Menu Bar Manager |
@@ -157,6 +157,10 @@ Empty query                                    Typing
   | `n ` | Quick Note | Switches the panel into the note editor |
   | `=` | Calculator, units, currency, dates, time zones | Also detected automatically: typing `2^10` shows the result first |
 
+- **Matching** is forgiving: words in any order, British or American spelling, plurals
+  and -er/-ing endings ("color picker", "pick color" and "colours" all find *Pick
+  Colour*), initials ("ns"), and a command's keywords count as aliases.
+- **Tab** shows a preview pane inside the bar; the bar keeps its width.
 - **Commands with arguments** parse inline: `timer 25m`, `awake 2h`, `vol 30`,
   `night 150`, `win left`. The command's parameter type (duration, percent, choice) does
   the parsing, so every feature gets this for free.

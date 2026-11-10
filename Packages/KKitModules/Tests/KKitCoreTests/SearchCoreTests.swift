@@ -33,6 +33,25 @@ struct FuzzyMatchTests {
         #expect(title > keyword)
         #expect(keyword == 0.85)
     }
+
+    @Test func findsWordsInAnyOrderAndEitherSpelling() throws {
+        for query in ["pick colour", "pick color", "colour picker", "color picker", "colors", "pick col", "colou"] {
+            let score = try #require(FuzzyMatch.score(query, in: "Pick Colour"), "\(query)")
+            #expect(score >= 0.7, "\(query)")
+        }
+        let reversed = try #require(FuzzyMatch.score("shift night", in: "Night Shift"))
+        let inOrder = try #require(FuzzyMatch.score("night sh", in: "Night Shift"))
+        #expect(inOrder > reversed)
+        #expect(FuzzyMatch.score("preferences", in: "System Settings") != nil)
+        #expect(FuzzyMatch.score("favorites", in: "Show Favourites") != nil)
+        #expect(FuzzyMatch.canonical("Favourite Colours") == "favorite color")
+        #expect(FuzzyMatch.canonical("organise") == FuzzyMatch.canonical("organize"))
+    }
+
+    @Test func wordsCanSpreadOverTitleAndKeywords() {
+        #expect(FuzzyMatch.score("hex picker", title: "Pick Colour", keywords: ["hex"]) == 0.62)
+        #expect(FuzzyMatch.score("hex lamp", title: "Pick Colour", keywords: ["hex"]) == nil)
+    }
 }
 
 struct CommandArgumentParserTests {

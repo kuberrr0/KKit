@@ -18,6 +18,19 @@ public final class ScreenCaptureKitService: ScreenCaptureService {
         return try await Self.captureImage(target, showsCursor: showsCursor, displays: Self.displayGeometry())
     }
 
+    public func windowThumbnails(_ windowIDs: [UInt32], maxSize: CGSize) -> AsyncStream<WindowThumbnail> {
+        guard !windowIDs.isEmpty, CGPreflightScreenCaptureAccess() else {
+            return AsyncStream { $0.finish() }
+        }
+        return AsyncStream { continuation in
+            let task = Task.detached(priority: .userInitiated) {
+                await Self.captureThumbnails(windowIDs, maxSize: maxSize) { continuation.yield($0) }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     public var supportsRecording: Bool {
         if #available(macOS 15.0, *) {
             return true
@@ -120,6 +133,57 @@ public final class ScreenCaptureKitService: ScreenCaptureService {
         }
     }
 
+    // MARK: Thumbnails
+
+    nonisolated static func captureThumbnails(
+        _ windowIDs: [UInt32],
+        maxSize: CGSize,
+        yield: @escaping @Sendable (WindowThumbnail) -> Void
+    ) async {
+        // Not only on-screen windows: minimised windows and hidden apps' windows can
+        // sometimes still be captured.
+        guard let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false) else {
+            return
+        }
+        var byID: [UInt32: UncheckedWindow] = [:]
+        for window in content.windows {
+            byID[window.windowID] = UncheckedWindow(window: window)
+        }
+        let targets = windowIDs.compactMap { byID[$0] }
+        await withTaskGroup(of: WindowThumbnail?.self) { group in
+            for target in targets {
+                group.addTask {
+                    guard !Task.isCancelled else { return nil }
+                    return await thumbnail(of: target.window, maxSize: maxSize)
+                }
+            }
+            for await result in group {
+                if let result {
+                    yield(result)
+                }
+            }
+        }
+    }
+
+    private nonisolated static func thumbnail(of window: SCWindow, maxSize: CGSize) async -> WindowThumbnail? {
+        let frame = window.frame
+        guard frame.width >= 1, frame.height >= 1 else { return nil }
+        let filter = SCContentFilter(desktopIndependentWindow: window)
+        let pixelScale = CGFloat(filter.pointPixelScale)
+        let fit = min(maxSize.width / frame.width, maxSize.height / frame.height, 1)
+        let configuration = SCStreamConfiguration()
+        configuration.showsCursor = false
+        configuration.capturesAudio = false
+        configuration.ignoreShadowsSingleWindow = true
+        configuration.scalesToFit = true
+        configuration.width = max(Int(frame.width * fit * pixelScale), 2)
+        configuration.height = max(Int(frame.height * fit * pixelScale), 2)
+        guard let image = try? await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration) else {
+            return nil
+        }
+        return WindowThumbnail(windowID: window.windowID, image: CapturedImage(image: image, scale: pixelScale))
+    }
+
     nonisolated static func shareableContent() async throws -> SCShareableContent {
         do {
             return try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
@@ -136,6 +200,11 @@ public final class ScreenCaptureKitService: ScreenCaptureService {
         let pid = ProcessInfo.processInfo.processIdentifier
         return content.applications.filter { $0.processID == pid }
     }
+}
+
+/// `SCWindow` isn't `Sendable`; it's only read inside one capture task.
+private struct UncheckedWindow: @unchecked Sendable {
+    let window: SCWindow
 }
 
 // MARK: - Recording

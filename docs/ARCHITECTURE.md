@@ -475,6 +475,14 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 > commands by id. `DisplayService` gained brightness (built-in displays) and
 > `AudioService` per-app volume (`ProcessTapMixer`, macOS 14.2 process taps).
 
+> **Window Switcher:** `WindowService` gained `switchableWindows(includeMinimized:
+> includeHiddenApps:)` (on-screen windows front to back, then minimised and hidden apps'
+> windows, each with its `CGWindowID` matched from the window list), `close`,
+> `activateApp(pid:)`, and `raise` now unhides, un-minimises and sets `AXFrontmost` so
+> switching works from the background under macOS 14's cooperative activation.
+> `ScreenCaptureService.windowThumbnails(_:maxSize:)` streams downscaled window
+> pictures (one `SCShareableContent` fetch, captures in parallel).
+
 ### InputTapService in detail
 
 Keyboard, Window Management, Volume, Clean Mode and (later) scroll-direction all need to
@@ -614,6 +622,7 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 | Night Shift | | ● cmds | ● tile, slider | ● | | | | ● gamma, dim, wake | | | | | | | Location (optional) |
 | Quick Note | ○ "saved" | ● `n ` mode, ⌘K action | | ● | | | | | | | ○ | | ○ selection | ● bookmark | — (folder picked by user) |
 | Window Management | ○ layout saved | ● cmds, layouts provider | | ● | ● modifier + mouse, drag snap | ● snap preview | | | | | | | ● WindowService | ● layouts | Accessibility |
+| Window Switcher | | ● cmd | | ● | ● modifier + Tab, keys while open | ● switcher panel | | | | | | ○ window previews | ● WindowService | | Accessibility, Screen Recording (previews, optional) |
 | Menu Bar Manager | | ● `m ` provider | ● separators | ● | | ● drop-down bar | | | | | | ○ icon images | ● MenuBarItems | ● | Accessibility, Screen Recording |
 | Quick Toggles | | ● cmds | ● tiles | ● | | ○ hide desktop | | | | | | | | | Automation (per toggle) |
 | Privacy Indicator | ● ear, page | ● cmd | | | | | ● DeviceUsage, mute | | | | | | | ○ log | — |

@@ -27,6 +27,9 @@ public final class FloatingBarHost: FloatingBarService {
     private var anchorTop: CGFloat = 0
     private var anchorMidX: CGFloat = 0
     private var saveTask: Task<Void, Never>?
+    /// Set while a result chosen in the bar runs, so a mode it opens (Show Clipboard
+    /// History) knows ⎋ should come back to search.
+    private var runningFromBar = false
 
     static let rememberSeconds: TimeInterval = 30
 
@@ -71,6 +74,8 @@ public final class FloatingBarHost: FloatingBarService {
 
     public func show(query: String?) {
         prepareForShow()
+        // The hotkey always opens search, even if the bar was last hidden in a mode.
+        model.exitMode()
         if let query {
             model.query = query
         } else {
@@ -80,8 +85,9 @@ public final class FloatingBarHost: FloatingBarService {
     }
 
     public func showMode(_ modeID: String, owner: FeatureID, text: String?) {
+        let fromSearch = runningFromBar || (isVisible && model.activeMode == nil)
         prepareForShow()
-        model.openMode(key: "\(owner.rawValue).\(modeID)", text: text ?? "")
+        model.openMode(key: "\(owner.rawValue).\(modeID)", text: text ?? "", returnsToSearch: fromSearch)
         present()
     }
 
@@ -285,14 +291,21 @@ public final class FloatingBarHost: FloatingBarService {
                 FloatingBarModeContext(
                     initialText: mode.text,
                     dismiss: { [weak self] in self?.hide() },
-                    exit: { [weak self] in self?.model.exitMode() },
+                    exit: { [weak self] in
+                        if mode.returnsToSearch {
+                            self?.model.exitMode()
+                        } else {
+                            self?.hide()
+                        }
+                    },
                     openSettings: { [weak self] in
                         self?.hide()
                         self?.openSettings?(.feature(mode.owner))
                     }
                 )
             },
-            prefixes: { [weak self] in self?.prefixHints() ?? [] }
+            prefixes: { [weak self] in self?.prefixHints() ?? [] },
+            backToSearch: { [weak self] in self?.model.exitMode() }
         )
     }
 
@@ -420,6 +433,8 @@ public final class FloatingBarHost: FloatingBarService {
             hide()
         }
         Task { [weak self] in
+            self?.runningFromBar = true
+            defer { self?.runningFromBar = false }
             do {
                 try await self?.perform(result)
             } catch {

@@ -147,6 +147,7 @@ Empty query                                    Typing
   | Prefix | Source | Notes |
   |---|---|---|
   | *(none)* | Everything, ranked by frecency + fuzzy match | |
+  | `a ` | Applications, A to Z | Apps also show in every search; `a ` alone lists them all |
   | `>` | Commands (all KKit features + system actions) | Lock, sleep, empty Trash, dark mode, eject all, window layouts… |
   | `f ` | Files & folders | Spotlight (`NSMetadataQuery`) |
   | `w ` | Web: URLs, search engines, bookmarks, open tabs | Tabs need Automation permission per browser |
@@ -164,6 +165,10 @@ Empty query                                    Typing
   contributed by features.
 - **Placement:** centred on the screen with the cursor; optional "top of screen" position.
 - Remembers the last query for 30 s so ⎋ then reopen doesn't lose work.
+- **Modes** (Clipboard History, Quick Note) fill the bar. ⎋ goes back to search when the
+  mode was opened from the bar (a prefix or a result), and closes the bar when it was
+  opened by its own hotkey; the ‹ in the mode's header always goes back to search. The
+  bar's hotkey always opens search, never a mode it was last hidden in.
 
 ### 2.4 Settings window
 

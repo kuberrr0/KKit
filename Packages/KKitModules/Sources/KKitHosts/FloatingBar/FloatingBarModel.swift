@@ -85,6 +85,9 @@ public struct ActiveMode: Identifiable {
     public let owner: FeatureID
     public let mode: FloatingBarMode
     public let text: String
+    /// Opened from search (a prefix, or a result run in the bar), so ⎋ goes back there.
+    /// Opened straight from a hotkey or menu, ⎋ closes the bar.
+    public let returnsToSearch: Bool
 }
 
 /// The Floating Bar's state and query engine, free of AppKit so it can be tested:
@@ -140,6 +143,8 @@ public final class FloatingBarModel {
     @ObservationIgnored public var onHistoryChange: (@MainActor (FloatingBarHistory) -> Void)?
     @ObservationIgnored public var paintDeadline: Duration = .milliseconds(50)
     @ObservationIgnored public var resultLimit = 40
+    /// A prefix with nothing after it lists a whole source (`a ` lists every app).
+    @ObservationIgnored public var scopedResultLimit = 300
 
     public let commandProvider: CommandSearchProvider
     private let commands: CommandRegistry
@@ -150,6 +155,7 @@ public final class FloatingBarModel {
     @ObservationIgnored private var responded: Set<String> = []
     @ObservationIgnored private var painted = false
     @ObservationIgnored private var rankingText = ""
+    @ObservationIgnored private var currentLimit = 40
     /// The row the user moved to, kept while late providers fill in.
     @ObservationIgnored private var chosenRowID: String?
     @ObservationIgnored private var isSettingQuery = false
@@ -322,10 +328,11 @@ public final class FloatingBarModel {
 
     // MARK: Modes
 
-    /// Opens a mode by key ("quickNote.editor").
-    public func openMode(key: String, text: String) {
+    /// Opens a mode by key ("quickNote.editor"). `returnsToSearch`: ⎋ goes back to
+    /// search instead of closing the bar.
+    public func openMode(key: String, text: String, returnsToSearch: Bool = false) {
         guard let entry = sources().modes.first(where: { $0.key == key }) else { return }
-        enterMode(entry, text: text)
+        enterMode(entry, text: text, returnsToSearch: returnsToSearch)
     }
 
     public func exitMode() {
@@ -359,7 +366,7 @@ public final class FloatingBarModel {
         switch newRoute {
         case .mode(let key, let text):
             if let entry = current.modes.first(where: { $0.key == key }) {
-                enterMode(entry, text: text)
+                enterMode(entry, text: text, returnsToSearch: true)
             }
         case .empty:
             route = .empty
@@ -388,6 +395,7 @@ public final class FloatingBarModel {
         painted = false
         chosenRowID = nil
         rankingText = query.text
+        currentLimit = scoped ? max(resultLimit, scopedResultLimit) : resultLimit
         guard !entries.isEmpty else {
             rows = []
             selection = 0
@@ -439,7 +447,7 @@ public final class FloatingBarModel {
             Array(batches.values),
             query: rankingText,
             frecency: history.frecency,
-            limit: resultLimit
+            limit: currentLimit
         )
         rows = ranked.map { FloatingBarRow(result: $0, section: nil) }
         if let chosen = chosenRowID, let index = rows.firstIndex(where: { $0.id == chosen }) {
@@ -468,10 +476,10 @@ public final class FloatingBarModel {
         }
     }
 
-    private func enterMode(_ entry: ModeEntry, text: String) {
+    private func enterMode(_ entry: ModeEntry, text: String, returnsToSearch: Bool) {
         cancelSearch()
         closeActions()
-        activeMode = ActiveMode(key: entry.key, owner: entry.owner, mode: entry.mode, text: text)
+        activeMode = ActiveMode(key: entry.key, owner: entry.owner, mode: entry.mode, text: text, returnsToSearch: returnsToSearch)
         route = .mode(modeKey: entry.key, text: text)
         setQuerySilently("")
         rows = []

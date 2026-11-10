@@ -1,5 +1,6 @@
 import Foundation
 import KKitCore
+import os
 
 /// An installed application.
 struct AppEntry: Sendable, Hashable {
@@ -34,14 +35,21 @@ actor AppIndex {
     private let roots: [URL]
     private let extras: [URL]
     private let maxAge: TimeInterval
+    private let log: Logger?
     private var entries: [AppEntry] = []
     private var scannedAt: Date?
     private var scanTask: Task<[AppEntry], Never>?
 
-    init(roots: [URL] = AppIndex.defaultRoots, extras: [URL] = AppIndex.extraApps, maxAge: TimeInterval = 600) {
+    init(
+        roots: [URL] = AppIndex.defaultRoots,
+        extras: [URL] = AppIndex.extraApps,
+        maxAge: TimeInterval = 600,
+        log: Logger? = nil
+    ) {
         self.roots = roots
         self.extras = extras
         self.maxAge = maxAge
+        self.log = log
     }
 
     func apps() async -> [AppEntry] {
@@ -65,7 +73,14 @@ actor AppIndex {
             AppIndex.scan(roots: roots, extras: extras)
         }
         scanTask = task
+        let started = Date()
         let result = await task.value
+        let milliseconds = Int(Date().timeIntervalSince(started) * 1000)
+        if result.isEmpty {
+            log?.error("Found no applications in \(roots.map(\.path).joined(separator: ", "), privacy: .public)")
+        } else {
+            log?.info("Indexed \(result.count) applications in \(milliseconds) ms")
+        }
         entries = result
         scannedAt = Date()
         scanTask = nil
@@ -128,12 +143,15 @@ actor AppIndex {
     }
 }
 
-/// Applications, in root search (no prefix).
+/// Applications: in root search, and all of them, A to Z, under `a `.
 @MainActor
 final class AppsProvider: SearchProvider {
+    nonisolated static let prefixText = "a "
+
     let id = "apps"
     let displayName = String(localized: "Applications")
     let symbol = "square.grid.2x2"
+    let prefix: String? = AppsProvider.prefixText
     private let index: AppIndex
 
     init(index: AppIndex) {
@@ -149,11 +167,15 @@ final class AppsProvider: SearchProvider {
 
     func results(for query: SearchQuery) -> AsyncStream<[SearchResult]> {
         let text = query.trimmed
-        guard !text.isEmpty else { return .single([]) }
+        let scoped = query.isScoped
+        guard scoped || !text.isEmpty else { return .single([]) }
         let index = index
         return .task {
             let apps = await index.apps()
-            return Self.match(text, in: apps)
+            if text.isEmpty {
+                return Self.all(apps)
+            }
+            return Self.match(text, in: apps, limit: scoped ? 60 : 8)
         }
     }
 
@@ -166,18 +188,28 @@ final class AppsProvider: SearchProvider {
             scored.append((app, score))
         }
         scored.sort { $0.1 > $1.1 || ($0.1 == $1.1 && $0.0.name.count < $1.0.name.count) }
-        return scored.prefix(limit).map { entry, score in
-            SearchResult(
-                id: entry.resultID,
-                title: entry.name,
-                subtitle: folderName(of: entry.url),
-                icon: .file(entry.url),
-                score: score,
-                kind: .application(entry.url),
-                accessory: String(localized: "Application"),
-                actionTitle: String(localized: "Open")
-            )
-        }
+        return scored.prefix(limit).map { result(for: $0, score: $1) }
+    }
+
+    /// Every app, by name (`a ` with nothing after it). They all score the same, so the
+    /// Floating Bar keeps this order apart from frecency.
+    nonisolated static func all(_ apps: [AppEntry]) -> [SearchResult] {
+        apps
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            .map { result(for: $0, score: 0.5) }
+    }
+
+    nonisolated static func result(for entry: AppEntry, score: Double) -> SearchResult {
+        SearchResult(
+            id: entry.resultID,
+            title: entry.name,
+            subtitle: folderName(of: entry.url),
+            icon: .file(entry.url),
+            score: score,
+            kind: .application(entry.url),
+            accessory: String(localized: "Application"),
+            actionTitle: String(localized: "Open")
+        )
     }
 
     nonisolated static func folderName(of url: URL) -> String {

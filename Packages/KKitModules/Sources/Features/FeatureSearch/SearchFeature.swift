@@ -25,7 +25,7 @@ public final class SearchFeature: Feature {
 
     public init(context: FeatureContext) {
         self.context = context
-        let index = AppIndex()
+        let index = AppIndex(log: context.log)
         apps = AppsProvider(index: index)
         files = FilesProvider(search: { context.fileSearch }, settings: context.settings)
         systemSettings = SystemSettingsProvider()
@@ -48,6 +48,14 @@ public final class SearchFeature: Feature {
 
     public var commands: [Command] {
         [
+            Command(
+                id: "search.applications",
+                title: String(localized: "Search Applications"),
+                symbol: "square.grid.2x2",
+                keywords: ["apps", "launch", "open", "programs"]
+            ) { [weak self] _ in
+                self?.context.floatingBar.show(query: AppsProvider.prefixText)
+            },
             Command(
                 id: "search.files",
                 title: String(localized: "Search Files"),

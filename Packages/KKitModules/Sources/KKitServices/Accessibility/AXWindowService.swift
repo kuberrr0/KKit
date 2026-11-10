@@ -67,8 +67,48 @@ public final class AXWindowService: WindowService {
     }
 
     public func raise(_ window: WindowHandle) async {
+        guard window.pid != ownPID else { return }
+        let app = NSRunningApplication(processIdentifier: window.pid)
+        if app?.isHidden == true {
+            app?.unhide()
+        }
         await engine.raise(window.key)
-        NSRunningApplication(processIdentifier: window.pid)?.activate()
+        app?.activate()
+    }
+
+    public func switchableWindows(includeMinimized: Bool, includeHiddenApps: Bool) async -> [WindowInfo] {
+        guard isTrusted else { return [] }
+        let onScreen = Self.onScreenWindows().filter { $0.pid != ownPID }
+        let offScreen = Self.offScreenWindows().filter { $0.pid != ownPID }
+        // Never KKit itself: answering its own Accessibility queries off the main thread
+        // crashes SwiftUI.
+        let apps = NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular && $0.processIdentifier != ownPID && !$0.isTerminated }
+            .map { AXWindowEngine.AppEntry(pid: $0.processIdentifier, isHidden: $0.isHidden) }
+        let raws = await engine.switchableWindows(
+            onScreen: onScreen,
+            offScreen: offScreen,
+            apps: apps,
+            includeMinimized: includeMinimized,
+            includeHiddenApps: includeHiddenApps
+        )
+        return raws.compactMap(decorate)
+    }
+
+    public func close(_ window: WindowHandle) async {
+        guard window.pid != ownPID else { return }
+        await engine.close(window.key)
+    }
+
+    public func activateApp(pid: Int32) async {
+        guard pid != ownPID, let app = NSRunningApplication(processIdentifier: pid) else { return }
+        if app.isHidden {
+            app.unhide()
+        }
+        if isTrusted {
+            await engine.makeFrontmost(pid: pid)
+        }
+        app.activate()
     }
 
     public var isSystemEdgeTilingEnabled: Bool {
@@ -91,7 +131,9 @@ public final class AXWindowService: WindowService {
             frame: AX.flip(raw.frame),
             isMinimized: raw.isMinimized,
             isFullScreen: raw.isFullScreen,
-            isResizable: raw.isResizable
+            isResizable: raw.isResizable,
+            windowID: raw.windowID,
+            isAppHidden: raw.isAppHidden
         )
     }
 
@@ -127,7 +169,29 @@ public final class AXWindowService: WindowService {
             return AXWindowEngine.ListedWindow(
                 pid: pid,
                 bounds: bounds,
-                ownerName: entry[kCGWindowOwnerName as String] as? String
+                ownerName: entry[kCGWindowOwnerName as String] as? String,
+                windowID: (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value ?? 0
+            )
+        }
+    }
+
+    /// Layer-0 windows that aren't on screen: minimised, hidden apps', other Spaces'.
+    static func offScreenWindows() -> [AXWindowEngine.ListedWindow] {
+        guard let list = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] else {
+            return []
+        }
+        return list.compactMap { entry in
+            guard (entry[kCGWindowLayer as String] as? Int) == 0,
+                  (entry[kCGWindowIsOnscreen as String] as? Bool) != true,
+                  let pid = entry[kCGWindowOwnerPID as String] as? Int32,
+                  let boundsDict = entry[kCGWindowBounds as String] as? NSDictionary,
+                  let bounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary),
+                  bounds.width > 40, bounds.height > 40 else { return nil }
+            return AXWindowEngine.ListedWindow(
+                pid: pid,
+                bounds: bounds,
+                ownerName: entry[kCGWindowOwnerName as String] as? String,
+                windowID: (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value ?? 0
             )
         }
     }
@@ -144,6 +208,8 @@ actor AXWindowEngine {
         var isMinimized: Bool
         var isFullScreen: Bool
         var isResizable: Bool
+        var windowID: UInt32?
+        var isAppHidden = false
     }
 
     struct ListedWindow: Sendable {
@@ -151,6 +217,13 @@ actor AXWindowEngine {
         /// Core Graphics coordinates (top-left origin), like Accessibility.
         var bounds: CGRect
         var ownerName: String?
+        /// `CGWindowID`
+        var windowID: UInt32
+    }
+
+    struct AppEntry: Sendable {
+        var pid: pid_t
+        var isHidden: Bool
     }
 
     private var elements: [UInt64: AXUIElement] = [:]
@@ -193,10 +266,42 @@ actor AXWindowEngine {
             let candidates = cache[entry.pid] ?? Self.standardWindows(of: entry.pid)
             cache[entry.pid] = candidates
             guard let window = candidates.first(where: { Self.close(AX.frame($0), entry.bounds) }),
-                  let raw = raw(for: window, pid: entry.pid, ownerName: entry.ownerName),
+                  var raw = raw(for: window, pid: entry.pid, ownerName: entry.ownerName),
                   !used.contains(raw.key) else { continue }
+            raw.windowID = entry.windowID
             used.insert(raw.key)
             result.append(raw)
+        }
+        return result
+    }
+
+    /// The window switcher's list: on-screen windows front to back, then minimised
+    /// windows and hidden apps' windows, app by app. Windows that are neither (on another
+    /// Space, or full screen) are left out.
+    func switchableWindows(
+        onScreen: [ListedWindow],
+        offScreen: [ListedWindow],
+        apps: [AppEntry],
+        includeMinimized: Bool,
+        includeHiddenApps: Bool
+    ) -> [RawWindow] {
+        var result = windows(matching: onScreen)
+        var used = Set(result.map(\.key))
+        for app in apps {
+            guard includeMinimized || (app.isHidden && includeHiddenApps) else { continue }
+            for window in Self.standardWindows(of: app.pid) {
+                guard var raw = raw(for: window, pid: app.pid, ownerName: nil), !used.contains(raw.key) else { continue }
+                if raw.isMinimized {
+                    guard includeMinimized, !app.isHidden || includeHiddenApps else { continue }
+                } else {
+                    guard app.isHidden, includeHiddenApps else { continue }
+                }
+                raw.isAppHidden = app.isHidden
+                let frame = raw.frame
+                raw.windowID = offScreen.first { $0.pid == app.pid && Self.close(frame, $0.bounds) }?.windowID
+                used.insert(raw.key)
+                result.append(raw)
+            }
         }
         return result
     }
@@ -224,8 +329,26 @@ actor AXWindowEngine {
 
     func raise(_ key: UInt64) {
         guard let window = elements[key] else { return }
+        if AX.bool(window, "AXMinimized") == true {
+            AX.set(window, "AXMinimized", kCFBooleanFalse)
+        }
+        // Making the app frontmost through Accessibility works even when macOS 14's
+        // cooperative activation ignores `NSRunningApplication.activate()` from a
+        // background app.
+        if let pid = AX.pid(window) {
+            AX.set(AX.application(pid), "AXFrontmost", kCFBooleanTrue)
+        }
         AX.perform(window, "AXRaise")
         AX.set(window, "AXMain", kCFBooleanTrue)
+    }
+
+    func makeFrontmost(pid: pid_t) {
+        AX.set(AX.application(pid), "AXFrontmost", kCFBooleanTrue)
+    }
+
+    func close(_ key: UInt64) {
+        guard let window = elements[key], let button = AX.element(window, "AXCloseButton") else { return }
+        AX.perform(button, "AXPress")
     }
 
     // MARK: Private

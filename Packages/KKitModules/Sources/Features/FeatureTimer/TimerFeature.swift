@@ -5,14 +5,14 @@ import KKitUI
 import SwiftUI
 import os
 
-/// Countdown timers, Pomodoro and a stopwatch, in the Island. DESIGN.md §3.16.
+/// Countdown timers and a stopwatch, in the Island. DESIGN.md §3.16.
 @MainActor
 public final class TimerFeature: Feature {
     public static let manifest = FeatureManifest(
         id: "timer",
         name: String(localized: "Timer"),
         symbol: "timer",
-        summary: String(localized: "Countdowns, Pomodoro and a stopwatch, in the Island."),
+        summary: String(localized: "Countdowns and a stopwatch, in the Island."),
         category: .productivity,
         optionalPermissions: [.notifications],
         enabledByDefault: true
@@ -102,33 +102,6 @@ public final class TimerFeature: Feature {
                 self?.controller.cancelAll()
             },
             Command(
-                id: "timer.pomodoro",
-                title: String(localized: "Start or Stop Pomodoro"),
-                symbol: "brain.head.profile",
-                keywords: ["pomodoro", "focus", "work", "break"],
-                state: { [weak self] in self?.pomodoroState ?? .off }
-            ) { [weak self] _ in
-                self?.controller.togglePomodoro()
-            },
-            Command(
-                id: "timer.pausePomodoro",
-                title: String(localized: "Pause or Resume Pomodoro"),
-                symbol: "playpause",
-                keywords: ["pomodoro"],
-                isEnabled: { [weak self] in self?.model.pomodoro != nil }
-            ) { [weak self] _ in
-                self?.controller.togglePausePomodoro()
-            },
-            Command(
-                id: "timer.skipPomodoro",
-                title: String(localized: "Skip to Next Pomodoro Interval"),
-                symbol: "forward.end",
-                keywords: ["pomodoro", "break"],
-                isEnabled: { [weak self] in self?.model.pomodoro != nil }
-            ) { [weak self] _ in
-                self?.controller.skipPomodoroPhase()
-            },
-            Command(
                 id: "timer.stopwatch",
                 title: String(localized: "Start or Pause Stopwatch"),
                 symbol: "stopwatch",
@@ -158,14 +131,6 @@ public final class TimerFeature: Feature {
         ]
     }
 
-    public var quickToggles: [QuickToggle] {
-        commands.filter { $0.id == "timer.pomodoro" }.map {
-            var command = $0
-            command.title = String(localized: "Pomodoro")
-            return QuickToggle(command)
-        }
-    }
-
     public var islandPages: [IslandPage] {
         [IslandPage(id: "timer", title: String(localized: "Timer"), symbol: "timer") { [controller] in
             TimerIslandPage(controller: controller)
@@ -179,11 +144,6 @@ public final class TimerFeature: Feature {
     }
 
     // MARK: Private
-
-    private var pomodoroState: CommandState {
-        guard let pomodoro = model.pomodoro else { return .off }
-        return .value(KKFormat.clock(pomodoro.remaining(at: Date())))
-    }
 
     private func observeModel() {
         withObservationTracking {
@@ -229,12 +189,6 @@ public final class TimerFeature: Feature {
             title = countdown.label.map { String(localized: "\($0) is done") } ?? String(localized: "Timer done")
             body = KKFormat.shortDuration(countdown.duration)
             symbol = "bell.fill"
-        case .pomodoroPhaseEnded(let finished, let next):
-            title = finished == .work ? String(localized: "Time for a break") : String(localized: "Back to focus")
-            body = context.settings[TimerSettings.autoStartNext]
-                ? String(localized: "\(next.title) started")
-                : String(localized: "\(next.title) is ready")
-            symbol = next.symbol
         }
         context.island.showHUD(IslandHUD(id: "timer.done", symbol: symbol, title: title, detail: body, tint: .accent, duration: 5))
         let sound = context.settings[TimerSettings.sound]
@@ -254,15 +208,12 @@ public final class TimerFeature: Feature {
         }
     }
 
-    /// One Island activity per countdown, one for the Pomodoro and one for the stopwatch.
+    /// One Island activity per countdown and one for the stopwatch.
     private func syncIsland() {
         var wanted: [String: IslandActivity] = [:]
         if context.settings[TimerSettings.showInIsland] {
             for countdown in model.countdowns {
                 wanted["countdown.\(countdown.id.uuidString)"] = countdownActivity(countdown)
-            }
-            if model.pomodoro != nil {
-                wanted["pomodoro"] = pomodoroActivity()
             }
             if model.stopwatch.isActive {
                 wanted["stopwatch"] = stopwatchActivity()
@@ -291,18 +242,6 @@ public final class TimerFeature: Feature {
             compactLeading: AnyView(TimerRing(model: model, kind: .countdown(id))),
             compactTrailing: AnyView(TimerClock(model: model, kind: .countdown(id))),
             expanded: AnyView(CountdownIslandView(controller: controller, id: id))
-        )
-    }
-
-    private func pomodoroActivity() -> IslandActivity {
-        IslandActivity(
-            id: "pomodoro",
-            title: String(localized: "Pomodoro"),
-            symbol: "brain.head.profile",
-            priority: .normal,
-            compactLeading: AnyView(TimerRing(model: model, kind: .pomodoro)),
-            compactTrailing: AnyView(TimerClock(model: model, kind: .pomodoro)),
-            expanded: AnyView(PomodoroIslandView(controller: controller))
         )
     }
 

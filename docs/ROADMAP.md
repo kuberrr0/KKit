@@ -47,7 +47,7 @@ Done. Notes on what was built versus the plan below:
 - **Volume & Audio** (CoreAudio volume, device switching, mic mute, Island HUD; media-key
   takeover once the input tap lands)
 - **Privacy Indicator** (mic/camera in use, in the Island)
-- **Timer, Pomodoro & Stopwatch**
+- **Timer & Stopwatch** (Pomodoro removed later at KV's request)
 - **Quick Toggles**
 
 ## M2 — Floating Bar ✅
@@ -154,6 +154,11 @@ Done. Notes on what was built versus the plan below:
 
 - **MenuBarItemsService** + **Menu Bar Manager** (sections, drop-down bar for hidden and
   behind-the-notch icons). Last of the core features because it's the most fragile.
+
+## Window Switcher (added after M5)
+
+- **Window Switcher** (DESIGN.md §3.19): ⌘Tab through windows with live previews, on
+  the shared input tap, `WindowService` and `ScreenCaptureService`. On by default.
 
 ## Fixes after M5 testing (2026-11-09)
 

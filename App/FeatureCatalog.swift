@@ -16,6 +16,7 @@ import FeatureTimer
 import FeatureToggles
 import FeatureVolume
 import FeatureWindows
+import FeatureWindowSwitcher
 import KKitCore
 
 /// The one list of every feature type, in the order they appear in Settings.
@@ -40,6 +41,7 @@ enum FeatureCatalog {
         ShelfFeature.self,
         KeyboardFeature.self,
         WindowsFeature.self,
+        WindowSwitcherFeature.self,
         CleanModeFeature.self,
     ]
 }

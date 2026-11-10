@@ -31,6 +31,7 @@ let package = Package(
         .library(name: "FeatureWindows", targets: ["FeatureWindows"]),
         .library(name: "FeatureCleanMode", targets: ["FeatureCleanMode"]),
         .library(name: "FeatureBrightness", targets: ["FeatureBrightness"]),
+        .library(name: "FeatureWindowSwitcher", targets: ["FeatureWindowSwitcher"]),
         .library(name: "FeatureNowPlaying", targets: ["FeatureNowPlaying"]),
     ],
     dependencies: [
@@ -72,6 +73,7 @@ let package = Package(
         .feature("FeatureWindows"),
         .feature("FeatureCleanMode"),
         .feature("FeatureBrightness"),
+        .feature("FeatureWindowSwitcher"),
         .feature("FeatureNowPlaying"),
 
         // ── Tests ─────────────────────────────────────────────────────────────
@@ -102,6 +104,7 @@ let package = Package(
         .featureTests("FeatureWindows"),
         .featureTests("FeatureCleanMode"),
         .featureTests("FeatureBrightness"),
+        .featureTests("FeatureWindowSwitcher"),
         .featureTests("FeatureNowPlaying"),
     ]
 )

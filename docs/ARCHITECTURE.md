@@ -475,6 +475,14 @@ Services are created once, lazily, by the `ServiceContainer` at launch.
 > commands by id. `DisplayService` gained brightness (built-in displays) and
 > `AudioService` per-app volume (`ProcessTapMixer`, macOS 14.2 process taps).
 
+> **Window Switcher:** `WindowService` gained `switchableWindows(includeMinimized:
+> includeHiddenApps:)` (on-screen windows front to back, then minimised and hidden apps'
+> windows, each with its `CGWindowID` matched from the window list), `close`,
+> `activateApp(pid:)`, and `raise` now unhides, un-minimises and sets `AXFrontmost` so
+> switching works from the background under macOS 14's cooperative activation.
+> `ScreenCaptureService.windowThumbnails(_:maxSize:)` streams downscaled window
+> pictures (one `SCShareableContent` fetch, captures in parallel).
+
 ### InputTapService in detail
 
 Keyboard, Window Management, Volume, Clean Mode and (later) scroll-direction all need to
@@ -615,6 +623,7 @@ for await value in context.settings.changes(of: NightShiftSettings.intensity) { 
 | Night Shift | | ● cmds | ● tile, slider | ● | | | | ● gamma, dim, wake | | | | | | | Location (optional) |
 | Quick Note | ○ "saved" | ● `n ` mode, ⌘K action | | ● | | | | | | | ○ | | ○ selection | ● bookmark | — (folder picked by user) |
 | Window Management | ○ layout saved | ● cmds, layouts provider | | ● | ● modifier + mouse, drag snap | ● snap preview | | | | | | | ● WindowService | ● layouts | Accessibility |
+| Window Switcher | | ● cmd | | ● | ● modifier + Tab, keys while open | ● switcher panel | | | | | | ○ window previews | ● WindowService | | Accessibility, Screen Recording (previews, optional) |
 | Menu Bar Manager | | ● `m ` provider | ● separators | ● | | ● drop-down bar | | | | | | ○ icon images | ● MenuBarItems | ● | Accessibility, Screen Recording |
 | Quick Toggles | | ● cmds | ● tiles | ● | | ○ hide desktop | | | | | | | | | Automation (per toggle) |
 | Privacy Indicator | ● ear, page | ● cmd | | | | | ● DeviceUsage, mute | | | | | | | ○ log | — |
@@ -645,7 +654,7 @@ Example: the *Timer* feature (DESIGN.md §3.16), simplified.
    final class TimerFeature: Feature {
        static let manifest = FeatureManifest(
            id: "timer", name: "Timer", symbol: "timer",
-           summary: "Countdowns and Pomodoro in the Island.",
+           summary: "Countdowns and a stopwatch in the Island.",
            category: .productivity, requiredPermissions: [], optionalPermissions: [],
            enabledByDefault: false)
 
@@ -736,7 +745,7 @@ rules.
 
 | Area | Risk | Mitigation |
 |---|---|---|
-| Now Playing | MediaRemote restricted for third-party apps since macOS 15.4 | Isolated `NowPlayingService`; AppleScript fallback for Music/Spotify; feature degrades gracefully |
+| Now Playing | MediaRemote restricted for third-party apps since macOS 15.4 | Isolated `NowPlayingService`; MediaRemote is reached through a helper hosted by `/usr/bin/perl`; if that stops working, Settings says so and the feature shows nothing |
 | Night Shift >100% | Gamma tables conflict with other gamma apps; reset on display change; don't affect some HDR content | Re-apply on reconfiguration/wake; detect conflicts and warn |
 | Clipboard | Apple is moving toward prompting for programmatic pasteboard reads | Handle the prompt in onboarding; explain why |
 | Event tap | Disabled if slow; needs two permissions | One shared tap, strict time budget, auto re-enable |

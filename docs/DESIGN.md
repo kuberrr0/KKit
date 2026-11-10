@@ -228,7 +228,7 @@ the architecture doc.
 | 3.13 | Menu Bar Manager | Recommended |
 | 3.14 | Quick Toggles | Recommended |
 | 3.15 | Privacy Indicator (mic & camera in use) | Recommended |
-| 3.16 | Timer, Pomodoro & Stopwatch | Recommended |
+| 3.16 | Timer & Stopwatch | Recommended |
 | 3.17 | Calculator, Units & Currency | Recommended |
 | 3.18 | Clean Mode (clean keyboard) | Recommended |
 
@@ -514,15 +514,15 @@ See §2.2. It's a *host* like the Floating Bar: features push **activities** int
   `kCMIODevicePropertyDeviceIsRunningSomewhere` for cameras (camera app attribution isn't
   public, so it shows "Camera in use" without a name). No permissions needed to observe.
 
-### 3.16 Timer, Pomodoro & Stopwatch
+### 3.16 Timer & Stopwatch
 
-- **Does:** countdown timers (several at once, with labels: `timer 10m tea`), Pomodoro
-  cycles (25/5 with a long break every 4, all configurable), and a stopwatch with laps.
+- **Does:** countdown timers (several at once, with labels: `timer 10m tea`) and a
+  stopwatch with laps. (Pomodoro was built in M1 and removed at KV's request.)
 - **Surfaces:** Island compact activity with the remaining time (progress ring on the
   left ear), expanded page with controls, Floating Bar commands with inline durations,
   menu bar tile, end-of-timer Island alert + sound + optional system notification.
-- **Settings:** Pomodoro lengths, sounds, "start Focus during Pomodoro" (via Shortcuts),
-  auto-start next interval, keep a history of completed sessions.
+- **Settings:** default length, sounds, notification, keep a history of completed
+  timers.
 - **Tech:** pure app logic; schedules a `UNNotification` as a backup so a timer still
   fires if KKit is restarted.
 
@@ -558,6 +558,27 @@ See §2.2. It's a *host* like the Floating Bar: features push **activities** int
   Needs **Accessibility** + **Input Monitoring**.
 
 ---
+
+### 3.19 Window Switcher (replaces ⌘Tab)
+
+- **Does:** switches between **windows**, not just apps. Hold ⌘ and press Tab: a panel
+  of live window previews appears, the previous window selected; Tab/⇧Tab or the
+  arrows move, letting go of ⌘ switches. A quick ⌘Tab switches straight to the previous
+  window without showing the panel. Minimised windows, hidden apps' windows and apps
+  with no open windows are included (each a setting), after the windows on screen.
+  While it's open: ↩ switches, ⎋ or a click elsewhere cancels, W closes the selected
+  window, Q quits its app, H hides it; hovering selects and clicking switches.
+- **Surfaces:** the switcher panel (centred on the screen with the pointer), the
+  `windowSwitcher.show` command (opens it without holding a key, for the Floating Bar
+  or a hotkey), Settings page.
+- **Settings:** take over modifier + Tab (on), which modifier (⌘, ⌥ or ⌃), include
+  minimised / hidden / windowless apps, live previews on/off and their size.
+- **Tech:** the shared **InputTapService** swallows ⌘Tab before the Dock sees it (and
+  every key while the switcher is open); **WindowService** lists and raises windows
+  through Accessibility; **ScreenCaptureService** takes small window pictures only
+  while the panel is showing. Needs **Accessibility**; previews need **Screen
+  Recording** (app icons without it). Windows on other Spaces aren't listed
+  (Accessibility doesn't see them); their apps appear as app tiles.
 
 ## 4. More feature ideas (not yet planned)
 

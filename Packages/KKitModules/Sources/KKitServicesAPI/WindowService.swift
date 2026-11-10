@@ -26,6 +26,11 @@ public struct WindowInfo: Hashable, Sendable, Identifiable {
     public var isFullScreen: Bool
     /// Whether the window can be resized (some dialogs and utility windows can't).
     public var isResizable: Bool
+    /// The window server's id (`CGWindowID`), for screenshots and previews, where it
+    /// could be matched.
+    public var windowID: UInt32?
+    /// The owning app is hidden (⌘H).
+    public var isAppHidden: Bool
 
     public init(
         ref: WindowHandle,
@@ -35,7 +40,9 @@ public struct WindowInfo: Hashable, Sendable, Identifiable {
         frame: CGRect,
         isMinimized: Bool = false,
         isFullScreen: Bool = false,
-        isResizable: Bool = true
+        isResizable: Bool = true,
+        windowID: UInt32? = nil,
+        isAppHidden: Bool = false
     ) {
         self.ref = ref
         self.title = title
@@ -45,6 +52,8 @@ public struct WindowInfo: Hashable, Sendable, Identifiable {
         self.isMinimized = isMinimized
         self.isFullScreen = isFullScreen
         self.isResizable = isResizable
+        self.windowID = windowID
+        self.isAppHidden = isAppHidden
     }
 
     public var id: WindowHandle { ref }
@@ -80,8 +89,19 @@ public protocol WindowService: AnyObject, Sendable {
     /// Moves and resizes. Some apps round sizes or refuse; read `info` to see the result.
     func setFrame(_ frame: CGRect, of window: WindowHandle) async
     func setOrigin(_ origin: CGPoint, of window: WindowHandle) async
-    /// Brings the window and its app to the front.
+    /// Brings the window and its app to the front, unhiding the app and un-minimising
+    /// the window if needed.
     func raise(_ window: WindowHandle) async
+    /// Every window the window switcher can offer: the current Space's windows front to
+    /// back, then, when asked, minimised windows and windows of hidden apps (grouped by
+    /// app). Windows on other Spaces aren't included. Each carries its `windowID` where
+    /// the window server's list could be matched.
+    func switchableWindows(includeMinimized: Bool, includeHiddenApps: Bool) async -> [WindowInfo]
+    /// Presses the window's close button.
+    func close(_ window: WindowHandle) async
+    /// Brings an app to the front, unhiding it, even while KKit is in the background
+    /// (where macOS 14's cooperative activation can ignore `NSRunningApplication.activate`).
+    func activateApp(pid: Int32) async
     /// macOS 15's "Tile by dragging windows to screen edges" is on.
     var isSystemEdgeTilingEnabled: Bool { get }
 }

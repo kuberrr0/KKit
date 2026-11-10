@@ -93,6 +93,8 @@ targets:
       - package: KKitModules
         product: FeatureBrightness
       - package: KKitModules
+        product: FeatureWindowSwitcher
+      - package: KKitModules
         product: FeatureNowPlaying
       # Loaded by /usr/bin/perl, never by KKit, so it's embedded but not linked.
       - target: KKitMediaRemoteAdapter

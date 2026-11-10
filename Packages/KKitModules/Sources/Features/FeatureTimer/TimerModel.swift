@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// Countdowns, the Pomodoro cycle and the stopwatch. Time is passed in, so tests can
+/// Countdowns and the stopwatch. Time is passed in, so tests can
 /// drive it; the feature owns the clock and the alerts.
 @MainActor
 @Observable
@@ -16,13 +16,11 @@ final class TimerModel {
     }
 
     var countdowns: [Countdown] { snapshot.countdowns }
-    var pomodoro: Pomodoro? { snapshot.pomodoro }
     var stopwatch: Stopwatch { snapshot.stopwatch }
 
     /// The next moment something ends.
     var nextDeadline: Date? {
-        let dates = snapshot.countdowns.compactMap(\.endDate) + [snapshot.pomodoro?.endDate].compactMap { $0 }
-        return dates.min()
+        snapshot.countdowns.compactMap(\.endDate).min()
     }
 
     // MARK: Countdowns
@@ -56,37 +54,6 @@ final class TimerModel {
         mutate { $0.countdowns = [] }
     }
 
-    // MARK: Pomodoro
-
-    func startPomodoro(_ lengths: PomodoroLengths, at date: Date) {
-        mutate { $0.pomodoro = .start(lengths, at: date) }
-    }
-
-    func stopPomodoro() {
-        mutate { $0.pomodoro = nil }
-    }
-
-    func togglePausePomodoro(at date: Date) {
-        mutate { snapshot in
-            guard var pomodoro = snapshot.pomodoro else { return }
-            if pomodoro.isRunning {
-                pomodoro.pause(at: date)
-            } else {
-                pomodoro.resume(at: date)
-            }
-            snapshot.pomodoro = pomodoro
-        }
-    }
-
-    /// Ends the current interval early and starts the next one.
-    func skipPomodoroPhase(_ lengths: PomodoroLengths, at date: Date) {
-        mutate { snapshot in
-            guard var pomodoro = snapshot.pomodoro else { return }
-            pomodoro.advance(lengths, autoStart: true, at: date)
-            snapshot.pomodoro = pomodoro
-        }
-    }
-
     // MARK: Stopwatch
 
     func toggleStopwatch(at date: Date) {
@@ -109,26 +76,13 @@ final class TimerModel {
 
     // MARK: Ending
 
-    /// Removes finished countdowns and advances a finished Pomodoro interval.
-    /// Returns what ended, to announce.
-    func collectFinished(at date: Date, lengths: PomodoroLengths, autoStart: Bool) -> [TimerEvent] {
-        var events: [TimerEvent] = []
+    /// Removes finished countdowns. Returns what ended, to announce.
+    func collectFinished(at date: Date) -> [TimerEvent] {
         let finished = snapshot.countdowns.filter { $0.isFinished(at: date) }
-        events += finished.map(TimerEvent.countdownFinished)
-        var pomodoro = snapshot.pomodoro
-        if var running = pomodoro, running.isFinished(at: date) {
-            let ended = running.phase
-            running.advance(lengths, autoStart: autoStart, at: date)
-            events.append(.pomodoroPhaseEnded(finished: ended, next: running.phase))
-            pomodoro = running
-        }
-        guard !events.isEmpty else { return [] }
+        guard !finished.isEmpty else { return [] }
         let finishedIDs = Set(finished.map(\.id))
-        mutate { snapshot in
-            snapshot.countdowns.removeAll { finishedIDs.contains($0.id) }
-            snapshot.pomodoro = pomodoro
-        }
-        return events
+        mutate { $0.countdowns.removeAll { finishedIDs.contains($0.id) } }
+        return finished.map(TimerEvent.countdownFinished)
     }
 
     // MARK: Private

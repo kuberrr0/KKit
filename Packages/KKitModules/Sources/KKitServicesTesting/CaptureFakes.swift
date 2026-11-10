@@ -66,6 +66,26 @@ public final class FakeScreenCaptureService: ScreenCaptureService {
         return CapturedImage(image: Self.sampleImage(width: 40, height: 20), scale: 2)
     }
 
+    /// Window ids asked for in `windowThumbnails`.
+    public private(set) var thumbnailRequests: [[UInt32]] = []
+
+    /// A grey image for every window, unless `failure` is set.
+    public func windowThumbnails(_ windowIDs: [UInt32], maxSize: CGSize) -> AsyncStream<WindowThumbnail> {
+        thumbnailRequests.append(windowIDs)
+        let failed = failure != nil
+        return AsyncStream { continuation in
+            if !failed {
+                for id in windowIDs {
+                    continuation.yield(WindowThumbnail(
+                        windowID: id,
+                        image: CapturedImage(image: Self.sampleImage(width: 40, height: 20), scale: 2)
+                    ))
+                }
+            }
+            continuation.finish()
+        }
+    }
+
     public func startRecording(_ target: CaptureTarget, options: RecordingOptions, to url: URL) async throws -> any ScreenRecording {
         if let failure { throw failure }
         let recording = FakeRecording(target: target, options: options, outputURL: url)
